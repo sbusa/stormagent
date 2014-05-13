@@ -40,8 +40,8 @@ agent.on "ready", ->
 
 agent.on "active", (storm) ->
     @log "firing up stormbolt..."
-    stormbolt = require 'stormbolt'
-    bolt = new stormbolt storm
+    # stormbolt = require 'stormbolt'
+    # bolt = new stormbolt storm
     # bolt.on "error", (err) =>
     #     @log "bolt error, force agent re-activation..."
     #     @activate config.storm, (err, status) =>

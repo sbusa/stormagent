@@ -43,10 +43,10 @@ class StormAgent extends EventEmitter
         @functions = @config.functions
 
         # handle when StormAgent webapp ready
-        @on 'ready', (zappa) =>
-            zappa.app.agent = @
+        @on 'ready', (@include) =>
             @state.running = true
-            @include = zappa.include
+            @log "loading API..."
+            @include require './api'
 
         @env = require './environment'
 
@@ -55,16 +55,16 @@ class StormAgent extends EventEmitter
         _agent = @;
         {@app} = require('zappajs') @config.port, ->
             @configure =>
-              @use 'bodyParser', 'methodOverride', @app.router, 'static'
-              @set 'basepath': '/v1.0'
+                @use 'bodyParser', 'methodOverride', @app.router, 'static'
+                @set 'basepath': '/v1.0'
+                @set 'agent': _agent
 
             @configure
               development: => @use errorHandler: {dumpExceptions: on, showStack: on}
               production: => @use 'errorHandler'
 
             @enable 'serve jquery', 'minify'
-
-            _agent.emit 'ready', this
+            _agent.emit 'ready', @include
             callback() if callback?
 
 
