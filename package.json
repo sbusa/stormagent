@@ -9,8 +9,10 @@
 		"url": "git://github.com/stormstack/stormagent.git"
 	},
 	"dependencies": {
-		"stormbolt": "0.1.x",
-       	"zappajs": "0.3.x",
+	    "stormbolt": "0.1.x",
+	    "passport" :"0.2.x",
+	    "passport-http" :"0.2.x",
+	"zappajs": "0.3.x",
 		"request": "2.34.x",
 		"json-schema": "0.2.0",
 		"async": "0.8.x",
