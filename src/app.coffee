@@ -13,7 +13,9 @@ config.port    = argv.p ? 5000
 config.logfile = argv.l ? "/var/log/stormagent.log"
 config.datadir = argv.d ? "/var/stormagent"
 
+# COMMENT OUT below "storm" object FOR REAL USE
 # test storm data for manual config
+# storm = null <-- should be the default
 storm =
     provider: "openstack"
     tracker: "https://allow@stormtracker.dev.intercloud.net"
@@ -21,18 +23,23 @@ storm =
     id: "testing-uuid"
     cert: ""
     key: ""
-    bolt:
-        remote: "bolt://bolt.dev.intercloud.net"
-        listen: 443
-        local: 8017
-        local_forwarding_ports: [ 5000 ]
-        beacon:
-            interval: 10
-            retry: 3
+    ca: ""
+    uplinks: [ "bolt://stormtower.dev.intercloud.net" ]
+    uplinkStrategy: "round-robin"
+    allowRelay: true
+    relayPort: 8017
+    allowedPorts: [ 5000 ]
+    listenPort: 443
+    beaconInterval: 10
+    beaconRetry: 3
 
 # start the stormagent instance
 StormAgent = require './stormagent'
 agent = new StormAgent config
+
+#
+# activation and establishment of bolt channel is *optionally* handled at the application layer
+#
 agent.on "ready", ->
     @log "starting activation..."
     @activate storm, (err, status) =>
@@ -40,13 +47,22 @@ agent.on "ready", ->
 
 agent.on "active", (storm) ->
     @log "firing up stormbolt..."
-    # stormbolt = require 'stormbolt'
-    # bolt = new stormbolt storm
-    # bolt.on "error", (err) =>
-    #     @log "bolt error, force agent re-activation..."
-    #     @activate config.storm, (err, status) =>
-    #         @log "re-activation completed with #{status}"
-    #bolt.start()
+    stormbolt = require 'stormbolt'
+    try
+        bolt = new stormbolt storm
+        bolt.on "error", (err) =>
+            @log "bolt error, force agent re-activation..."
+            @activate config.storm, (err, status) =>
+                @log "re-activation completed with #{status}"
+        bolt.run()
+    catch error
+        @log "bolt fizzled... should do something smart here"
 
 agent.run()
 
+# Garbage collect every 2 sec
+# Run node with --expose-gc
+if gc?
+    setInterval (
+        () -> gc()
+    ), 2000

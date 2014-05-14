@@ -42,6 +42,27 @@ class StormAgent extends EventEmitter
 
         @functions = @config.functions
 
+        @stormschema =
+            name: "storm"
+            type: "object"
+            additionalProperties: true
+            properties:
+                provider:       { type: "string" }
+                tracker:        { type: "string" }
+                skey:           { type: "string" }
+                id:             { type: "string", required: true }
+                cert:           { type: "any", required: true }
+                key:            { type: "any", required: true }
+                ca:             { type: "any", required: true }
+                uplinks:        { type: "array" }
+                uplinkStrategy: { type: "string" }
+                allowRelay:     { type: "boolean" }
+                relayPort:      { type: "integer" }
+                allowedPorts:   { type: "array" }
+                listenPort:     { type: "integer" }
+                beaconInterval: { type: "integer" }
+                beaconRetry:    { type: "integer" }
+
         # handle when StormAgent webapp ready
         @on 'ready', (@include) =>
             @state.running = true
@@ -90,6 +111,7 @@ class StormAgent extends EventEmitter
     #
     activate: (storm, callback) ->
         count = 0
+        @state.activated = false;
         async.until(
             () => # test condition
                 @state.activated? and @state.activated
@@ -189,7 +211,8 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         # do something
-                                        storm.bolt = JSON.parse body
+                                        boltconfig = JSON.parse body
+                                        storm = extend( storm, boltconfig )
                                         next null, storm
                                     else next err
                             catch error
@@ -197,13 +220,18 @@ class StormAgent extends EventEmitter
                                 next error
 
                 ], (err, storm) => # finally
-                    if storm?
-                        @log "activation completed successfully"
-                        @state.activated = true
-                        @emit "active", storm
-                        repeat
-                    else
+                    try
+                        result = validate storm, @stormschema
+                        if result.valid
+                            @log "activation completed successfully"
+                            @state.activated = true
+                            @emit "active", storm
+                            repeat
+                        else
+                            throw new Error "invalid final storm data schema!"
+                    catch error
                         @log "error during activation: #{err}"
+                        @log error
                         setTimeout repeat, @config.repeatdelay
 
             (err) => # final call
@@ -213,9 +241,3 @@ class StormAgent extends EventEmitter
 
 module.exports = StormAgent
 
-# Garbage collect every 2 sec
-# Run node with --expose-gc
-if gc?
-    setInterval (
-        () -> gc()
-    ), 2000
