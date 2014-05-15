@@ -43,12 +43,12 @@
 				"agent.env.discover",
 				"agent.env.os"
 			],
-			"api": "./lib/api"
+			"plugin": "./lib/plugin"
 		}
 	},
 	"scripts": {
 		"prepublish": "find src -name '*.coffee' | xargs coffee -o lib -c",
-		"start": "node lib/app.js"
+		"start": "node lib/app"
 	},
 	"contributors": [
 		"Add your name here"
