@@ -1,7 +1,7 @@
 {
 	"name": "stormagent",
 	"description": "stormagent provides base agent functionality for all stormstack components",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"author": "Peter K. Lee",
 	"homepage": "http://stormstack.org",
 	"repository": {
@@ -12,14 +12,15 @@
 	    "stormbolt": "0.1.x",
 	    "passport" :"0.2.x",
 	    "passport-http" :"0.2.x",
-	"zappajs": "0.3.x",
+		"zappajs": "0.3.x",
 		"request": "2.34.x",
 		"json-schema": "0.2.0",
 		"async": "0.8.x",
 		"node-uuid": "1.3.x",
 		"minimist":"0.1.0",
 		"find-in-path":"0.0.x",
-		"pem": "1.4.x"
+		"pem": "1.4.x",
+		"dirty": "0.9.x"
 	},
 	"devDependencies": {
 		"coffee-script": ">=1.3"
@@ -33,13 +34,17 @@
 		"port": 5000,
 		"logfile": "/var/log/stormagent.log",
 		"datadir": "/var/stormagent",
-		"functions": [
-			"agent.run",
-			"agent.execute",
-			"agent.activate",
-			"agent.env.discover",
-			"agent.env.os"
-		]
+		"repeatdelay": 5000,
+		"storm": {
+			"functions": [
+				"agent.run",
+				"agent.execute",
+				"agent.activate",
+				"agent.env.discover",
+				"agent.env.os"
+			],
+			"api": "./lib/api"
+		}
 	},
 	"scripts": {
 		"prepublish": "find src -name '*.coffee' | xargs coffee -o lib -c",

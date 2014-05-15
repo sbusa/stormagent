@@ -20,7 +20,6 @@ class StormAgent extends EventEmitter
 		@config = require('../package').config
 		@config = extend(@config, config) if config?
 
-		@config.repeatdelay ?= 5000
 		@log "constructor initialized with:\n" + @inspect @config
 
 		@log "setting up directories..."
@@ -40,6 +39,9 @@ class StormAgent extends EventEmitter
 			activated: false
 			running: false
 
+        # special zappajs include function (not sure if it works outside context...)
+        @include = require('zappajs').include
+
 		@functions = @config.functions
 
 		# handle when StormAgent webapp ready
@@ -49,6 +51,30 @@ class StormAgent extends EventEmitter
 			@include require './api'
 
 		@env = require './environment'
+
+    newdb: (filename,callback) ->
+        dirty = require('dirty') "#{filename}"
+        dirty._writeStream.on 'error', (err) ->
+            @log err
+            callback err
+        dirty._writeStream.on 'open', ->
+            @log 'dirty db initialied ok'
+            callback null, dirty
+
+    require: (id) ->
+        # inspect if we are importing in other "storm" compatible modules
+        try
+            pkgconfig = require("#{id}/package.json").config
+            @functions.push pkgconfig.storm.functions... if pkgconfig.storm.functions?
+
+            # not sure if we should register it as part of on ready state or can be invoked any time?
+            @on 'ready', =>
+                @include require("#{id}/#{pkgconfig.storm.api}") if pkgconfig.storm.api?
+        catch err
+            @log "#{id} is not a storm compatible module"
+
+        # return the real require call
+        require id
 
 	# starts the agent web services API
 	run: (callback) ->
