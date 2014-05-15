@@ -5,13 +5,11 @@ EventEmitter = require('events').EventEmitter
 class StormAgent extends EventEmitter
 
     validate = require('json-schema').validate
-    uuid = require('node-uuid')
     fs = require 'fs'
     path = require 'path'
     util = require 'util'
     extend = require('util')._extend
     async = require 'async'
-    request = require 'request'
 
     constructor: (config) ->
         @log 'constructor called with:\n'+ @inspect config if config?
@@ -21,7 +19,7 @@ class StormAgent extends EventEmitter
         @config = extend(@config, config) if config?
 
         @log "constructor initialized with:\n" + @inspect @config
-
+        uuid = require('node-uuid')
         @state =
             id: null
             instance: uuid.v4()
@@ -41,7 +39,7 @@ class StormAgent extends EventEmitter
             util.log "Error in creating data dirs"
         ###
 
-        @import this
+        @import module
 
         # handle when StormAgent webapp ready
         @on 'zappa.ready', (@include) =>
@@ -49,15 +47,22 @@ class StormAgent extends EventEmitter
 
     newdb: (filename,callback) ->
         dirty = require('dirty') "#{filename}"
-        dirty._writeStream.on 'error', (err) ->
+        dirty._writeStream.on 'error', (err) =>
             @log err
             callback err
-        dirty._writeStream.on 'open', ->
+        dirty._writeStream.on 'open', =>
             @log 'dirty db initialized ok'
             callback null, dirty
 
     import: (id) ->
-        id = '..' if id == this
+        if id instanceof Object and id.filename?
+            self = true
+            # let's find the module root dir
+            id = p = id.filename
+            while (p = path.dirname(p)) and p isnt path.sep and not fs.existsSync("#{p}/package.json")
+                @log "checking #{p}..."
+            id = p if p isnt path.sep
+
         # inspect if we are importing in other "storm" compatible modules
         try
             pkgconfig = require("#{id}/package.json").config
@@ -66,6 +71,7 @@ class StormAgent extends EventEmitter
 
             if pkgconfig.storm.plugin?
                 plugin = require("#{id}/#{pkgconfig.storm.plugin}")
+                @log "[#{id}] importing... found plugin" if plugin?
                 @include plugin if @state.running
                 # also schedule event trigger so that every time zappa.ready is emitted, we re-load the APIs
                 @on 'zappa.ready', (@include) =>
@@ -77,7 +83,7 @@ class StormAgent extends EventEmitter
 
         # return the real require call
         try
-            require("#{id}") unless id is '..'
+            require("#{id}") unless self? and self
         catch err
             @log "[#{id}] importing... failed with: "+err
 
@@ -121,6 +127,7 @@ class StormAgent extends EventEmitter
     # activation logic for connecting into stormstack bolt overlay network
     #
     activate: (storm, callback) ->
+        request = require 'request'
         count = 0
         async.until(
             () => # test condition
@@ -164,7 +171,7 @@ class StormAgent extends EventEmitter
                     # 3. generate CSR request if no storm.bolt.cert
                     (storm, next) =>
                         storm.bolt ?= {}
-                        if storm.bolt.cert? and storm.bolt.key?
+                        if storm.bolt.cert? or (storm.csr? and storm.bolt.key?)
                             return next null, storm
 
                         @log "generating CSR..."
@@ -177,12 +184,12 @@ class StormAgent extends EventEmitter
                                 organization: "ClearPath Networks"
                                 organizationUnit: "CPN"
                                 commonName: storm.id
-                                emailAddress: "#{agentId}@intercloud.net"
+                                emailAddress: "#{storm.id}@intercloud.net"
                               , (err, res) =>
                                 if res? and res.csr?
-                                    @log "Activation: openssl csr generation completed , result ",res.csr
+                                    @log "CSR generation completed: "+ @inspect res.csr
                                     storm.csr = res.csr
-                                    storm.bolt.key = res.clientkey
+                                    storm.bolt.key = res.clientKey
                                     next null, storm
                                 else
                                     new Error "CSR generation failure"
@@ -195,7 +202,7 @@ class StormAgent extends EventEmitter
                         if storm.bolt.cert? and storm.bolt.key?
                             return next null,storm
 
-                        @log "requesting CSR signing from stormtracker..."
+                        @log "requesting CSR signing from #{storm.tracker}..."
                         r = request.post "#{storm.tracker}/#{storm.id}/csr", (err, res, body) =>
                             try
                                 switch res.statusCode
