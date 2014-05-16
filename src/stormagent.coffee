@@ -42,7 +42,7 @@ class StormAgent extends EventEmitter
         @import module
 
         # handle when StormAgent webapp ready
-        @on 'zappa.ready', (@include) =>
+        @on 'running', (@include) =>
             @state.running = true
 
     newdb: (filename,callback) ->
@@ -68,13 +68,14 @@ class StormAgent extends EventEmitter
             pkgconfig = require("#{id}/package.json").config
             @log "[#{id}] importing... found package.config" if pkgconfig?
             @functions.push pkgconfig.storm.functions... if pkgconfig.storm.functions?
+            @log "available functions:\n" + @inspect @functions
 
             if pkgconfig.storm.plugin?
                 plugin = require("#{id}/#{pkgconfig.storm.plugin}")
                 @log "[#{id}] importing... found plugin" if plugin?
                 @include plugin if @state.running
-                # also schedule event trigger so that every time zappa.ready is emitted, we re-load the APIs
-                @on 'zappa.ready', (@include) =>
+                # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
+                @on 'running', (@include) =>
                     @log "loading storm-compatible plugin API for: #{id}"
                     @include plugin
             @log "[#{id}] is a storm compatible module"
@@ -88,7 +89,7 @@ class StormAgent extends EventEmitter
             @log "[#{id}] importing... failed with: "+err
 
     # starts the agent web services API
-    run: (callback) ->
+    run: ->
         _agent = @;
 
         {@app} = require('zappajs') @config.port, ->
@@ -102,9 +103,7 @@ class StormAgent extends EventEmitter
               production: => @use 'errorHandler'
 
             @enable 'serve jquery', 'minify'
-            _agent.emit 'zappa.ready', @include
-            callback() if callback?
-
+            _agent.emit 'running', @include
 
     execute: (command, callback) ->
         unless command

@@ -41,7 +41,7 @@ agent = new StormAgent config
 #
 # activation and establishment of bolt channel is *optionally* handled at the application layer
 #
-agent.on "zappa.ready", ->
+agent.on "running", ->
     @log "unit testing..."
     @log "#1 - agent.env.discover\n" + @env.discover()
     @log "#2 - agent.env.os\n" + @inspect @env.os()
