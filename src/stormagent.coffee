@@ -7,16 +7,15 @@ class StormAgent extends EventEmitter
     validate = require('json-schema').validate
     fs = require 'fs'
     path = require 'path'
-    util = require 'util'
     extend = require('util')._extend
     async = require 'async'
 
     constructor: (config) ->
 
         # private helper functions
-
+        util = require 'util'
         @log = (message, obj) ->
-            out = "#{@constructor.name} - #{message}" if message?
+            out = "#{@constructor.name}: #{message}" if message?
             out += "\n" + util.inspect obj if obj?
             util.log out if out?
 
@@ -29,25 +28,27 @@ class StormAgent extends EventEmitter
                 @log 'dirty db initialized ok'
                 callback null, dirty if callback?
 
-        # start constructor initialization
-        @log 'constructor called with:' config
-
-        # need to setup some basic defaults...
-        @config = require('../package').config
-        @config = extend(@config, config) if config?
-
-        @log "constructor initialized with:" @config
+        # setup default state variables
         uuid = require('node-uuid')
         @state =
             id: null
             instance: uuid.v4()
             activated: false
             running: false
+        @config ?= {}
         @functions ?= []
+
+        # import self into self
+        @import module
+
+        @config = extend(@config, config) if config?
+        @log "agent.config", @config
+        @log "agent.functions", @functions
+
         @env = require './environment'
 
-        @log "setting up directories..."
         ###
+        @log "setting up directories..."
         fs=require('fs')
         try
             fs.mkdirSync("#{config.datadir}") unless fs.existsSync("#{config.datadir}")
@@ -57,47 +58,11 @@ class StormAgent extends EventEmitter
             util.log "Error in creating data dirs"
         ###
 
-        @import module
-
         # handle when StormAgent webapp ready
         @on 'running', (@include) =>
             @state.running = true
 
     # public functions
-
-    import: (id) ->
-        if id instanceof Object and id.filename?
-            self = true
-            # let's find the module root dir
-            id = p = id.filename
-            while (p = path.dirname(p)) and p isnt path.sep and not fs.existsSync("#{p}/package.json")
-                @log "checking #{p}..."
-            id = p if p isnt path.sep
-
-        # inspect if we are importing in other "storm" compatible modules
-        try
-            pkgconfig = require("#{id}/package.json").config
-            @log "[#{id}] importing... found package.config" if pkgconfig?
-            @functions.push pkgconfig.storm.functions... if pkgconfig.storm.functions?
-            @log "available functions:" @functions
-
-            if pkgconfig.storm.plugin?
-                plugin = require("#{id}/#{pkgconfig.storm.plugin}")
-                @log "[#{id}] importing... found plugin" if plugin?
-                @include plugin if @state.running
-                # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
-                @on 'running', (@include) =>
-                    @log "loading storm-compatible plugin API for: #{id}"
-                    @include plugin
-            @log "[#{id}] is a storm compatible module"
-        catch err
-            @log "[#{id}] is not a storm compatible module: "+err
-
-        # return the real require call
-        try
-            require("#{id}") unless self? and self
-        catch err
-            @log "[#{id}] importing... failed with: "+err
 
     # starts the agent web services API
     run: ->
@@ -115,6 +80,48 @@ class StormAgent extends EventEmitter
 
             @enable 'serve jquery', 'minify'
             _agent.emit 'running', @include
+
+    import: (id) ->
+        if id instanceof Object and id.filename?
+            self = true
+            # let's find the module root dir
+            id = p = id.filename
+            while (p = path.dirname(p)) and p isnt path.sep and not fs.existsSync("#{p}/package.json")
+                @log "checking #{p}..."
+            id = p if p isnt path.sep
+
+        # inspect if we are importing in other "storm" compatible modules
+        try
+            pkgconfig = require("#{id}/package.json").config
+            @log "import - [#{id}] found package.config" if pkgconfig?
+
+            if pkgconfig.storm.agent
+                @log "import - [#{id}] is an agent, getting config and functions..."
+                @config = extend( @config, pkgconfig)
+                delete @config.storm # we don't need the storm property
+                @log "import - [#{id}] available functions:", pkgconfig.storm.functions
+                @functions.push pkgconfig.storm.functions... if pkgconfig.storm.functions?
+
+            if pkgconfig.storm.plugins
+                @log "import - [#{id}] available plugins:", pkgconfig.storm.plugins
+                for plugfile in pkgconfig.storm.plugins
+                    plugin = require("#{id}/#{plugfile}")
+                    continue unless plugin
+                    @log "import - [#{id}] found valid plugin at #{plugfile}"
+                    @include plugin if @state.running
+                    # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
+                    @on 'running', (@include) =>
+                        @log "loading storm-compatible plugin for: #{id}/#{plugfile}"
+                        @include plugin
+            @log "import - [#{id}] is a storm compatible module"
+        catch err
+            @log "import - [#{id}] is not a storm compatible module: "+err
+
+        # return the real require call
+        try
+            require("#{id}") unless self? and self
+        catch err
+            @log "import - [#{id}] failed with: "+err
 
     execute: (command, callback) ->
         unless command
@@ -192,7 +199,7 @@ class StormAgent extends EventEmitter
                                 emailAddress: "#{storm.id}@intercloud.net"
                               , (err, res) =>
                                 if res? and res.csr?
-                                    @log "CSR generation completed:" res.csr
+                                    @log "CSR generation completed:", res.csr
                                     storm.csr = res.csr
                                     storm.bolt.key = res.clientKey
                                     next null, storm
@@ -246,14 +253,14 @@ class StormAgent extends EventEmitter
                         @log "activation completed successfully"
                         @state.activated = true
                         @emit "activated", storm
-                        repeat
+                        repeat null, storm
                     else
                         @log "error during activation: #{err}"
                         setTimeout repeat, @config.repeatdelay
 
-            (err) => # final call
+            (err, storm) => # final call
                 @log "final call on until..."
-                callback err, @state
+                callback err, storm if callback?
         )
 
 module.exports = StormAgent

@@ -35,14 +35,17 @@
 		"datadir": "/var/stormagent",
 		"repeatdelay": 5000,
 		"storm": {
+			"agent": true,
 			"functions": [
 				"agent.run",
+				"agent.import",
 				"agent.execute",
 				"agent.activate",
-				"agent.env.discover",
-				"agent.env.os"
+				"agent.discover"
 			],
-			"plugin": "./lib/plugin"
+			"plugins": [
+				"./lib/plugin"
+			]
 		}
 	},
 	"scripts": {

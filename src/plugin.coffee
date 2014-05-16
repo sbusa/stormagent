@@ -4,9 +4,9 @@
 
     validate = require('json-schema').validate
     schema = {}
+    agent = @settings.agent
 
     @get '/': ->
-        agent = @settings.agent
         res = agent.env.os()
         console.log res
         @send res

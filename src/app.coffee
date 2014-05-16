@@ -43,20 +43,14 @@ agent = new StormAgent config
 #
 agent.on "running", ->
     @log "unit testing..."
-    @log "#1 - agent.env.discover\n" + @env.discover()
-    @log "#2 - agent.env.os\n" + @inspect @env.os()
+    @log "#1 - agent.env.discover", @env.discover()
+    @log "#2 - agent.env.os", @env.os()
     @log "#3 - agent.activate"
     @activate storm, (err, status) =>
-        @log "activation completed with:\n" + @inspect status
+        @log "activation completed with", status
 
 agent.on "activated", (storm) ->
-    @log "activated with:\n" + @inspect storm
+    @log "activated with:", storm
 
 agent.run()
 
-# Garbage collect every 2 sec
-# Run node with --expose-gc
-if gc?
-    setInterval (
-        () -> gc()
-    ), 2000
