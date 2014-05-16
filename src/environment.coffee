@@ -201,7 +201,7 @@ class Environment
             (err) -> # finally
                 if err or not stormdata?
                     util.log "unable to discover the running provider environment!"
-                callback stormdata
+                callback stormdata if callback?
         )
 
     os: ->

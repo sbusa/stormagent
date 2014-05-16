@@ -42,22 +42,15 @@ agent = new StormAgent config
 # activation and establishment of bolt channel is *optionally* handled at the application layer
 #
 agent.on "zappa.ready", ->
-    @log "starting activation..."
+    @log "unit testing..."
+    @log "#1 - agent.env.discover\n" + @env.discover()
+    @log "#2 - agent.env.os\n" + @inspect @env.os()
+    @log "#3 - agent.activate"
     @activate storm, (err, status) =>
-        @log "activation completed with:\n", @inspect status
+        @log "activation completed with:\n" + @inspect status
 
 agent.on "activated", (storm) ->
-    @log "firing up stormbolt..."
-    stormbolt = @import 'stormbolt'
-    try
-        bolt = new stormbolt storm.bolt
-        bolt.on "error", (err) =>
-            @log "bolt error, force agent re-activation..."
-            @activate config.storm, (err, status) =>
-                @log "re-activation completed with #{status}"
-        bolt.run()
-    catch error
-        @log "bolt fizzled... should do something smart here"
+    @log "activated with:\n" + @inspect storm
 
 agent.run()
 
