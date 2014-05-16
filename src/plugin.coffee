@@ -18,11 +18,6 @@
         console.log res
         @send res
 
-    @get '/bolt': ->
-       x= require('./activation').getBoltData()
-       console.log x
-       @send x
-
 # /personality
     schema.personality =
         name: "personality"

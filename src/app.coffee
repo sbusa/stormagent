@@ -17,10 +17,10 @@ config.datadir = argv.d ? "/var/stormstack"
 # test storm data for manual config
 # storm = null <-- should be the default
 storm =
-    provider: "openstack"
-    tracker: "https://allow@stormtracker.dev.intercloud.net"
-    skey: "some-secure-serial-key"
-    id: "testing-uuid"
+    provider: null
+    tracker: null
+    skey: null
+    id: null
     bolt:
         cert: ""
         key: ""

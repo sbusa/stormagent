@@ -228,7 +228,7 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         bolt = JSON.parse body
-                                        @config.bolt = extend( @config.bolt, bolt )
+                                        storm.bolt = extend(storm.bolt,bolt)
                                         next null, storm
                                     else next err
                             catch error
