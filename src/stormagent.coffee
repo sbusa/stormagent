@@ -12,13 +12,31 @@ class StormAgent extends EventEmitter
     async = require 'async'
 
     constructor: (config) ->
-        @log 'constructor called with:\n'+ @inspect config if config?
+
+        # private helper functions
+
+        @log = (message, obj) ->
+            out = "#{@constructor.name} - #{message}" if message?
+            out += "\n" + util.inspect obj if obj?
+            util.log out if out?
+
+        @newdb = (filename,callback) ->
+            dirty = require('dirty') "#{filename}" if filename?
+            dirty._writeStream.on 'error', (err) =>
+                @log err
+                callback err if callback?
+            dirty._writeStream.on 'open', =>
+                @log 'dirty db initialized ok'
+                callback null, dirty if callback?
+
+        # start constructor initialization
+        @log 'constructor called with:' config
 
         # need to setup some basic defaults...
         @config = require('../package').config
         @config = extend(@config, config) if config?
 
-        @log "constructor initialized with:\n" + @inspect @config
+        @log "constructor initialized with:" @config
         uuid = require('node-uuid')
         @state =
             id: null
@@ -45,14 +63,7 @@ class StormAgent extends EventEmitter
         @on 'running', (@include) =>
             @state.running = true
 
-    newdb: (filename,callback) ->
-        dirty = require('dirty') "#{filename}"
-        dirty._writeStream.on 'error', (err) =>
-            @log err
-            callback err
-        dirty._writeStream.on 'open', =>
-            @log 'dirty db initialized ok'
-            callback null, dirty
+    # public functions
 
     import: (id) ->
         if id instanceof Object and id.filename?
@@ -68,7 +79,7 @@ class StormAgent extends EventEmitter
             pkgconfig = require("#{id}/package.json").config
             @log "[#{id}] importing... found package.config" if pkgconfig?
             @functions.push pkgconfig.storm.functions... if pkgconfig.storm.functions?
-            @log "available functions:\n" + @inspect @functions
+            @log "available functions:" @functions
 
             if pkgconfig.storm.plugin?
                 plugin = require("#{id}/#{pkgconfig.storm.plugin}")
@@ -116,11 +127,6 @@ class StormAgent extends EventEmitter
                 callback error
             else
                 callback()
-
-    log: (message) ->
-        util.log "#{@constructor.name} - #{message}"
-
-    inspect: util.inspect
 
     #
     # activation logic for connecting into stormstack bolt overlay network
@@ -186,7 +192,7 @@ class StormAgent extends EventEmitter
                                 emailAddress: "#{storm.id}@intercloud.net"
                               , (err, res) =>
                                 if res? and res.csr?
-                                    @log "CSR generation completed: "+ @inspect res.csr
+                                    @log "CSR generation completed:" res.csr
                                     storm.csr = res.csr
                                     storm.bolt.key = res.clientKey
                                     next null, storm
