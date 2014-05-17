@@ -70,7 +70,7 @@ class StormAgent extends EventEmitter
 
         {@app} = require('zappajs') @config.port, ->
             @configure =>
-                @use 'bodyParser', 'methodOverride',require("passport").initialize(),  @app.router, 'static'
+                @use 'bodyParser', 'methodOverride', require("passport").initialize(), @app.router, 'static'
                 @set 'basepath': '/v1.0'
                 @set 'agent': _agent
 
