@@ -104,8 +104,8 @@ class StormAgent extends EventEmitter
             @log "import - [#{id}] processing storm compatible module..."
 
             if storm.functions?
-                @log "import - [#{id}] is an agent, getting config and functions..."
-                @config = extend( @config, pkgconfig)
+                @log "import - [#{id}] extending config and functions..."
+                @config = extend( @config, pkgconfig) unless @state.running
                 delete @config.storm # we don't need the storm property
                 @log "import - [#{id}] available functions:", storm.functions
                 @functions.push storm.functions... if storm.functions?
