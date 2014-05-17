@@ -93,18 +93,19 @@ class StormAgent extends EventEmitter
         # inspect if we are importing in other "storm" compatible modules
         try
             pkgconfig = require("#{id}/package.json").config
-            @log "import - [#{id}] found package.config" if pkgconfig?
+            storm = pkgconfig.storm
+            @log "import - [#{id}] processing storm compatible module..."
 
-            if pkgconfig.storm.agent
+            if storm.functions?
                 @log "import - [#{id}] is an agent, getting config and functions..."
                 @config = extend( @config, pkgconfig)
                 delete @config.storm # we don't need the storm property
-                @log "import - [#{id}] available functions:", pkgconfig.storm.functions
-                @functions.push pkgconfig.storm.functions... if pkgconfig.storm.functions?
+                @log "import - [#{id}] available functions:", storm.functions
+                @functions.push storm.functions... if storm.functions?
 
-            if pkgconfig.storm.plugins
-                @log "import - [#{id}] available plugins:", pkgconfig.storm.plugins
-                for plugfile in pkgconfig.storm.plugins
+            if storm.plugins?
+                @log "import - [#{id}] available plugins:", storm.plugins
+                for plugfile in storm.plugins
                     plugin = require("#{id}/#{plugfile}")
                     continue unless plugin
                     @log "import - [#{id}] found valid plugin at #{plugfile}"
@@ -113,7 +114,6 @@ class StormAgent extends EventEmitter
                     @on 'running', (@include) =>
                         @log "loading storm-compatible plugin for: #{id}/#{plugfile}"
                         @include plugin
-            @log "import - [#{id}] is a storm compatible module"
         catch err
             @log "import - [#{id}] is not a storm compatible module: "+err
 
