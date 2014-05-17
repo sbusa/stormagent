@@ -32,7 +32,7 @@
 	"config": {
 		"port": 5000,
 		"logfile": "/var/log/stormagent.log",
-		"datadir": "/var/stormagent",
+		"datadir": "/var/stormstack",
 		"repeatdelay": 5000,
 		"storm": {
 			"agent": true,
