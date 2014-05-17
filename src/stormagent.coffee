@@ -150,14 +150,10 @@ class StormAgent extends EventEmitter
         count = 0
 
         # simple helper wrapper to issue a call with STORM authorization header
-        srequest = (method, url, token, callback) ->
-            method(
-                url: url
-                headers:
-                    Authorization: "STORM #{token}"
-               , (err, res, body) ->
+        srequest = (method, url, storm, callback) ->
+            method( url, (err, res, body) ->
                 callback err, res, body if callback?
-            ) if method? and method instanceof Function and url? and token?
+            ).auth storm.skey, storm.token if method? and method instanceof Function and url? and storm?
 
         async.until(
             () => # test condition
@@ -191,7 +187,7 @@ class StormAgent extends EventEmitter
                             return next null, storm
 
                         @log "looking up agent ID from stormtracker... #{storm.tracker}"
-                        srequest request, "#{storm.tracker}/skey/#{storm.skey}", storm.token, (err, res, body) =>
+                        srequest request, "#{storm.tracker}/skey/#{storm.skey}", storm, (err, res, body) =>
                             try
                                 next err if err
                                 switch res.statusCode
@@ -239,7 +235,7 @@ class StormAgent extends EventEmitter
                             return next null,storm
 
                         @log "requesting CSR signing from #{storm.tracker}..."
-                        r = srequest request.post, "#{storm.tracker}/#{storm.id}/csr", storm.token, (err, res, body) =>
+                        r = srequest request.post, "#{storm.tracker}/#{storm.id}/csr", storm, (err, res, body) =>
                             try
                                 switch res.statusCode
                                     when 200
@@ -260,7 +256,7 @@ class StormAgent extends EventEmitter
                             return next null,storm
 
                         @log "retrieving stormbolt configs from stormtracker..."
-                        srequest request, "#{storm.tracker}/#{storm.id}/bolt", storm.token, (err, res, body) =>
+                        srequest request, "#{storm.tracker}/#{storm.id}/bolt", storm, (err, res, body) =>
                             try
                                 switch res.statusCode
                                     when 200

@@ -41,11 +41,16 @@ class Environment
                 if res.statusCode == 200
                     metadata = JSON.parse body
                     util.log "metadata: "+metadata
+
+                    url = require('url').parse metadata.meta.stormtracker
+                    auth = url.auth
+                    delete url.auth
+
                     stormdata =
                         provider: provider.name
                         skey:     metadata.uuid
-                        tracker:  metadata.meta.stormtracker
-                        token:    metadata.meta.stoken
+                        tracker:  require('url').format url
+                        token:    auth
 
                     return callback stormdata if stormdata.skey
             catch error
