@@ -49,7 +49,7 @@
 		}
 	},
 	"scripts": {
-		"prepublish": "find src -name '*.coffee' | xargs coffee -o lib -c",
+		"prepublish": "mkdir -p lib; find src -name '*.coffee' | xargs coffee -o lib -c",
 		"start": "node lib/app"
 	},
 	"contributors": [

@@ -43,8 +43,9 @@ class Environment
                     util.log "metadata: "+metadata
                     stormdata =
                         provider: provider.name
-                        tracker: metadata.meta.stormtracker
-                        skey: metadata.uuid
+                        skey:     metadata.uuid
+                        tracker:  metadata.meta.stormtracker
+                        token:    metadata.meta.stoken
 
                     return callback stormdata if stormdata.skey
             catch error

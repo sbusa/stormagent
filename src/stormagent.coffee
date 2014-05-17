@@ -148,6 +148,17 @@ class StormAgent extends EventEmitter
     activate: (storm, callback) ->
         request = require 'request'
         count = 0
+
+        # simple helper wrapper to issue a call with STORM authorization header
+        srequest = (method, url, token, callback) ->
+            method(
+                url: url
+                headers:
+                    Authorization: "STORM #{token}"
+               , (err, res, body) ->
+                callback err, res, body if callback?
+            ) if method? and method instanceof Function and url? and token?
+
         async.until(
             () => # test condition
                 @state.activated? and @state.activated
@@ -158,14 +169,18 @@ class StormAgent extends EventEmitter
                 async.waterfall [
                     # 1. discover environment if no storm.tracker
                     (next) =>
-                        if storm? and storm.tracker? and storm.skey?
+                        if storm? and storm.tracker? and storm.skey? and storm.token?
                             return next null, storm
 
                         @log "discovering environment..."
                         @env.discover (storm) =>
-                            @state.env = storm
-                            if storm? and storm.tracker? and storm.skey?
-                                next null, storm
+                            if storm? and storm.provider? and storm.skey?
+                                @log "detected provider as: #{storm.provider} with skey: #{storm.skey}"
+                                if storm.tracker? and storm.token?
+                                    @state.env = storm
+                                    next null, storm
+                                else
+                                    next new Error "unable to retrieve storm tracker and token data!"
                             else
                                 next new Error "unable to discover environment!"
 
@@ -176,7 +191,7 @@ class StormAgent extends EventEmitter
                             return next null, storm
 
                         @log "looking up agent ID from stormtracker... #{storm.tracker}"
-                        request "#{storm.tracker}/skey/#{storm.skey}", (err, res, body) =>
+                        srequest request, "#{storm.tracker}/skey/#{storm.skey}", storm.token, (err, res, body) =>
                             try
                                 next err if err
                                 switch res.statusCode
@@ -186,7 +201,7 @@ class StormAgent extends EventEmitter
                                         next null, storm
                                     else next err
                             catch error
-                                @log "unable to lookup: "+ error
+                                @log "unable to lookup agent ID: "+ error
                                 next error
 
                     # 3. generate CSR request if no storm.bolt.cert
@@ -224,7 +239,7 @@ class StormAgent extends EventEmitter
                             return next null,storm
 
                         @log "requesting CSR signing from #{storm.tracker}..."
-                        r = request.post "#{storm.tracker}/#{storm.id}/csr", (err, res, body) =>
+                        r = srequest request.post, "#{storm.tracker}/#{storm.id}/csr", storm.token, (err, res, body) =>
                             try
                                 switch res.statusCode
                                     when 200
@@ -245,7 +260,7 @@ class StormAgent extends EventEmitter
                             return next null,storm
 
                         @log "retrieving stormbolt configs from stormtracker..."
-                        request "#{storm.tracker}/#{storm.id}/bolt", (err, res, body) =>
+                        srequest request, "#{storm.tracker}/#{storm.id}/bolt", storm.token, (err, res, body) =>
                             try
                                 switch res.statusCode
                                     when 200
