@@ -7,14 +7,14 @@
     agent = @settings.agent
 
     @get '/': ->
-        res = agent.env.os()
+        res = agent.status()
         console.log res
         @send res
 
 # /environment
 
     @get '/environment': ->
-        res = @settings.agent.env.os()
+        res = agent.env.os()
         console.log res
         @send res
 

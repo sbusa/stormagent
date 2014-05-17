@@ -35,6 +35,8 @@ class StormAgent extends EventEmitter
             instance: uuid.v4()
             activated: false
             running: false
+            env: null
+
         @config ?= {}
         @functions ?= []
 
@@ -63,6 +65,11 @@ class StormAgent extends EventEmitter
             @state.running = true
 
     # public functions
+
+    status: ->
+        @state.config = @config
+        @state.os = @env.os()
+        @state
 
     # starts the agent web services API
     run: ->
@@ -156,6 +163,7 @@ class StormAgent extends EventEmitter
 
                         @log "discovering environment..."
                         @env.discover (storm) =>
+                            @state.env = storm
                             if storm? and storm.tracker? and storm.skey?
                                 next null, storm
                             else
@@ -164,6 +172,7 @@ class StormAgent extends EventEmitter
                     # 2. lookup against stormtracker and retrieve agent ID if no storm.id
                     (storm, next) =>
                         if storm.id?
+                            @state.id = storm.id
                             return next null, storm
 
                         @log "looking up agent ID from stormtracker... #{storm.tracker}"
@@ -173,7 +182,7 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         agent = JSON.parse body
-                                        storm.id = agent.id
+                                        @state.id = storm.id = agent.id
                                         next null, storm
                                     else next err
                             catch error

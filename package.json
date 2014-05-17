@@ -37,11 +37,11 @@
 		"storm": {
 			"agent": true,
 			"functions": [
+				"agent.status",
 				"agent.run",
 				"agent.import",
 				"agent.execute",
-				"agent.activate",
-				"agent.discover"
+				"agent.activate"
 			],
 			"plugins": [
 				"./lib/plugin"

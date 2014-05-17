@@ -6,13 +6,15 @@ class Environment
     request = require 'request'
     util = require 'util'
 
+    # TODO - must support virtual software instance as well as CPE hardware instance!
+
     providers = [
         name: "openstack"
         metaurl: "http://169.254.169.254/openstack/latest/meta_data.json"
        , # this comma MUST be one column lower
         name: "gce"
         metaurl: "http://169.254.169.254/computeMetadata/v1"
-       , # below provider is minitracker details.. to be removed 
+       , # below provider is minitracker details.. to be removed
         name: "unit-test"
         metaurl:"http://192.168.122.248/latest/meta-data"
     ]
@@ -22,7 +24,9 @@ class Environment
         console.log 'Environment constructor called'
 
     check: (provider, callback) ->
-        callback() unless provider? and provider
+        # here, we actually should handle case where provider.metaurl is NOT set
+
+        callback() unless provider? and provider.metaurl?
         util.log "making a request to #{provider.metaurl}..."
         request
             uri: provider.metaurl
