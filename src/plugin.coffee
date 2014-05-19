@@ -7,9 +7,7 @@
     agent = @settings.agent
 
     @get '/': ->
-        res = agent.status()
-        console.log res
-        @send res
+        @send agent.status()
 
 # /environment
 

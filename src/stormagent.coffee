@@ -28,6 +28,16 @@ class StormAgent extends EventEmitter
                 @log 'dirty db initialized ok'
                 callback null, dirty if callback?
 
+        @timestamp = ->
+            d = new Date()
+            pad = (n) ->
+                sn = n.toString(10)
+                sn = '0' + sn if n < 10
+                sn
+            time = [pad(d.getHours()),pad(d.getMinutes()),pad(d.getSeconds())].join(':')
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            [d.getDate(), months[d.getMonth()], time].join(' ')
+
         # setup default state variables
         uuid = require('node-uuid')
         @state =
@@ -76,8 +86,15 @@ class StormAgent extends EventEmitter
         _agent = @;
 
         {@app} = require('zappajs') @config.port, ->
+            morgan = require('morgan')
+            morgan.token 'date', _agent.timestamp
+            # morgan.token 'response', (req,res) ->
+            #     res.on "data", (chunk) ->
+            #         _agent.log "response:", chunk
+            logger = morgan(":date - :remote-addr :method :url :status :response-time ms")
+
             @configure =>
-                @use 'bodyParser', 'methodOverride', require("passport").initialize(), @app.router, 'static'
+                @use 'bodyParser', 'methodOverride', logger, require("passport").initialize(), @app.router, 'static'
                 @set 'basepath': '/v1.0'
                 @set 'agent': _agent
 
