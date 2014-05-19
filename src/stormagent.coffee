@@ -91,7 +91,7 @@ class StormAgent extends EventEmitter
             # morgan.token 'response', (req,res) ->
             #     res.on "data", (chunk) ->
             #         _agent.log "response:", chunk
-            logger = morgan(":date - :remote-addr :method :url :status :response-time ms")
+            logger = morgan(":date - :method :url :status :response-time ms - :remote-addr")
 
             @configure =>
                 @use 'bodyParser', 'methodOverride', logger, require("passport").initialize(), @app.router, 'static'
