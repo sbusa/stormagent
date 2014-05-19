@@ -2,31 +2,107 @@ EventEmitter = require('events').EventEmitter
 #
 # base class for all stormstack agent components
 #
+#
+#
+util = require 'util'
+stormlog = (message, obj) ->
+    out = "#{@constructor.name}: #{message}" if message?
+    out += "\n" + util.inspect obj if obj?
+    util.log out if out?
+
+uuid = require('node-uuid')
+async = require 'async'
+
+class StormData
+
+    validate = require('json-schema').validate
+    util = require('util')
+
+    constructor: (@id, @data, schema) ->
+        res = validate data, schema
+        unless res.valid
+            throw new Error "unable to validate passed in data during StormData creation! "+ util.inspect res
+
+        @id ?= uuid.v4()
+        @validity = data.validity if data?
+        @saved = false
+
+class StormRegistry extends EventEmitter
+
+    constructor: (filename) ->
+        @log = stormlog
+
+        @running = true
+        @entries = []
+
+        if filename
+            @db = require('dirty') "#{filename}"
+            @db._writeStream.on 'error', (err) =>
+                @log err
+            @db._writeStream.on 'open', =>
+                @log 'loaded #{filename}'
+                @db.forEach (key,val) =>
+                    @log 'found ' + key if val?
+                    @emit 'load', key, val if val?
+
+    add: (key, entry) ->
+        return unless entry?
+        @log "adding #{entry.id} into entries"
+        entry.id ?= key ? uuid.v4()
+        entry.saved ?= saved ? false
+        if @db? and not entry.saved
+            data = entry
+            data = entry.data if entry instanceof StormData
+            @db.set entry.id, data
+            entry.saved = true
+        @entries[entry.id] = entry
+        @emit 'added', entry
+        entry
+
+    get: (key) ->
+        @entries[key]
+
+    remove: (key) ->
+        @log "removing #{key} from entries"
+        @emit 'removed', @entries[key]
+        delete @entries[key]
+
+    list: ->
+        @get key for key of @entries
+
+    expires: (interval) ->
+        async.whilst(
+            () => # test condition
+                @running
+            (repeat) =>
+                for key,entry of @entries
+                    unless entry?
+                        @remove key
+                        continue
+                    do (key,entry) =>
+                        @log "DEBUG: #{key} has validity=#{entry.validity}"
+                        @entries[key].validity -= interval / 1000
+                        unless entry.validity > 1
+                            @remove key
+                            @emit "expired", entry
+                setTimeout(repeat, interval)
+            (err) =>
+                @log "stormregistry stopped, validity checker stopping..."
+        )
+
 class StormAgent extends EventEmitter
 
     validate = require('json-schema').validate
     fs = require 'fs'
     path = require 'path'
     extend = require('util')._extend
-    async = require 'async'
 
     constructor: (config) ->
 
         # private helper functions
-        util = require 'util'
-        @log = (message, obj) ->
-            out = "#{@constructor.name}: #{message}" if message?
-            out += "\n" + util.inspect obj if obj?
-            util.log out if out?
+        @log = stormlog
 
         @newdb = (filename,callback) ->
-            dirty = require('dirty') "#{filename}" if filename?
-            dirty._writeStream.on 'error', (err) =>
-                @log err
-                callback err if callback?
-            dirty._writeStream.on 'open', =>
-                @log 'dirty db initialized ok'
-                callback null, dirty if callback?
 
         @timestamp = ->
             d = new Date()
@@ -75,6 +151,10 @@ class StormAgent extends EventEmitter
             @state.running = true
 
     # public functions
+    StormData: StormData
+
+    # creates a new registry tied with an optional data backend
+    StormRegistry: StormRegistry
 
     status: ->
         @state.config = @config
@@ -84,6 +164,8 @@ class StormAgent extends EventEmitter
     # starts the agent web services API
     run: ->
         _agent = @;
+
+        @log 'running with: ', @config
 
         {@app} = require('zappajs') @config.port, ->
             morgan = require('morgan')
