@@ -2,8 +2,7 @@ EventEmitter = require('events').EventEmitter
 #
 # base class for all stormstack agent components
 #
-#
-#
+
 util = require 'util'
 stormlog = (message, obj) ->
     out = "#{@constructor.name}: #{message}" if message?
@@ -11,12 +10,9 @@ stormlog = (message, obj) ->
     util.log out if out?
 
 uuid = require('node-uuid')
-async = require 'async'
-
 class StormData
 
     validate = require('json-schema').validate
-    util = require('util')
 
     constructor: (@id, @data, schema) ->
         res = validate data, schema
@@ -27,6 +23,7 @@ class StormData
         @validity = data.validity if data?
         @saved = false
 
+async = require 'async'
 class StormRegistry extends EventEmitter
 
     constructor: (filename) ->
@@ -151,11 +148,6 @@ class StormAgent extends EventEmitter
             @state.running = true
 
     # public functions
-    StormData: StormData
-
-    # creates a new registry tied with an optional data backend
-    StormRegistry: StormRegistry
-
     status: ->
         @state.config = @config
         @state.os = @env.os()
@@ -383,6 +375,8 @@ class StormAgent extends EventEmitter
         )
 
 module.exports = StormAgent
+module.exports.StormData = StormData
+module.exports.StormRegistry = StormRegistry
 
 # Garbage collect every 2 sec
 # Run node with --expose-gc
