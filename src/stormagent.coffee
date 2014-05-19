@@ -10,14 +10,17 @@ stormlog = (message, obj) ->
     util.log out if out?
 
 uuid = require('node-uuid')
-class StormData
+class StormData extends EventEmitter
 
     validate = require('json-schema').validate
 
     constructor: (@id, @data, schema) ->
-        res = validate data, schema
-        unless res.valid
-            throw new Error "unable to validate passed in data during StormData creation! "+ util.inspect res
+        @log = stormlog
+
+        if schema?
+            res = validate data, schema
+            unless res.valid
+                throw new Error "unable to validate passed in data during StormData creation! "+ util.inspect res
 
         @id ?= uuid.v4()
         @validity = data.validity if data?
@@ -41,6 +44,9 @@ class StormRegistry extends EventEmitter
                 @db.forEach (key,val) =>
                     @log 'found ' + key if val?
                     @emit 'load', key, val if val?
+                @emit 'ready'
+        else
+            @emit 'ready'
 
     add: (key, entry) ->
         return unless entry?
@@ -64,6 +70,16 @@ class StormRegistry extends EventEmitter
         @emit 'removed', @entries[key]
         delete @entries[key]
 
+    update: (key, entry) ->
+        if @db? and not entry.saved
+            data = entry
+            data = entry.data if entry instanceof StormData
+            @db.set entry.id, data
+            entry.saved = true
+        @entries[key] = entry
+        @emit 'updated', entry
+        entry
+
     list: ->
         @get key for key of @entries
 
@@ -79,7 +95,7 @@ class StormRegistry extends EventEmitter
                     do (key,entry) =>
                         @log "DEBUG: #{key} has validity=#{entry.validity}"
                         @entries[key].validity -= interval / 1000
-                        unless entry.validity > 1
+                        unless @entries[key].validity > 1
                             @remove key
                             @emit "expired", entry
                 setTimeout(repeat, interval)

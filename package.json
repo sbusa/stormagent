@@ -1,7 +1,7 @@
 {
 	"name": "stormagent",
 	"description": "stormagent provides base agent functionality for all stormstack components",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"author": "Peter K. Lee <peter@intercloud.net>",
 	"homepage": "http://stormstack.org",
 	"license": "MIT",
@@ -37,13 +37,27 @@
 		"datadir": "/var/stormstack",
 		"repeatdelay": 5000,
 		"storm": {
-			"agent": true,
 			"functions": [
 				"agent.status",
 				"agent.run",
 				"agent.import",
 				"agent.execute",
-				"agent.activate"
+				"agent.activate",
+				"registry.add",
+				"registry.get",
+				"registry.remove",
+				"registry.update",
+				"registry.list",
+				"registry.expires"
+			],
+			"events": [
+				"agent.running",
+				"agent.activated",
+				"registry.added",
+				"registry.removed",
+				"registry.updated",
+				"registry.expired",
+				"registry.load"
 			],
 			"plugins": [
 				"./lib/plugin"
