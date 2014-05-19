@@ -37,14 +37,15 @@ class StormRegistry extends EventEmitter
 
         if filename
             @db = require('dirty') "#{filename}"
+            @db.on 'load', =>
+                @db.forEach (key,val) =>
+                    @log "found #{key} with:", val
+                    @emit 'load', key, val if val?
+                @emit 'ready'
             @db._writeStream.on 'error', (err) =>
                 @log err
             @db._writeStream.on 'open', =>
                 @log "loaded #{filename}"
-                @db.forEach (key,val) =>
-                    @log 'found ' + key if val?
-                    @emit 'load', key, val if val?
-                @emit 'ready'
         else
             @emit 'ready'
 
