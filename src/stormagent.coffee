@@ -165,7 +165,10 @@ class StormAgent extends EventEmitter
 
     # public functions
     status: ->
-        @state.config = @config
+        @state.config = JSON.parse(JSON.stringify(@config))
+        delete @state.config.ca
+        delete @state.config.cert
+        delete @state.config.key
         @state.os = @env.os()
         @state
 
