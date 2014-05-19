@@ -40,7 +40,7 @@ class StormRegistry extends EventEmitter
             @db._writeStream.on 'error', (err) =>
                 @log err
             @db._writeStream.on 'open', =>
-                @log 'loaded #{filename}'
+                @log "loaded #{filename}"
                 @db.forEach (key,val) =>
                     @log 'found ' + key if val?
                     @emit 'load', key, val if val?
@@ -69,6 +69,8 @@ class StormRegistry extends EventEmitter
         @log "removing #{key} from entries"
         @emit 'removed', @entries[key]
         delete @entries[key]
+        if @db? and @entries[key]? and @entries[key].saved
+            @db.rm key
 
     update: (key, entry) ->
         if @db? and not entry.saved
