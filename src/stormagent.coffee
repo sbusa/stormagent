@@ -307,7 +307,7 @@ class StormAgent extends EventEmitter
                             return next null, storm
 
                         @log "looking up agent ID from stormtracker... #{storm.tracker}"
-                        srequest request, "#{storm.tracker}/skey/#{storm.skey}", storm, (err, res, body) =>
+                        srequest request, "#{storm.tracker}/serialkey/#{storm.skey}", storm, (err, res, body) =>
                             try
                                 next err if err
                                 switch res.statusCode
