@@ -53,6 +53,9 @@ class StormRegistry extends EventEmitter
 
     add: (key, entry) ->
         return unless entry?
+        match = @get key
+        if match?
+            @remove key
         @log "adding #{entry.id} into entries"
         entry.id ?= key ? uuid.v4()
         entry.saved ?= saved ? false
@@ -186,9 +189,6 @@ class StormAgent extends EventEmitter
         {@app} = require('zappajs') @config.port, ->
             morgan = require('morgan')
             morgan.token 'date', _agent.timestamp
-            # morgan.token 'response', (req,res) ->
-            #     res.on "data", (chunk) ->
-            #         _agent.log "response:", chunk
             logger = morgan(":date - :method :url :status :response-time ms - :remote-addr")
 
             @configure =>
@@ -200,7 +200,7 @@ class StormAgent extends EventEmitter
               development: => @use errorHandler: {dumpExceptions: on, showStack: on}
               production: => @use 'errorHandler'
 
-            @enable 'serve jquery', 'minify'
+            @enable 'serve jquery'
             _agent.emit 'running', @include
 
     import: (id) ->
