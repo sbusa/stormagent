@@ -38,14 +38,16 @@ class StormRegistry extends EventEmitter
         if filename
             @db = require('dirty') "#{filename}"
             @db.on 'load', =>
-                @db.forEach (key,val) =>
-                    @log "found #{key} with:", val
-                    @emit 'load', key, val if val?
+                @log "loaded #{filename}"
+                try
+                    @db.forEach (key,val) =>
+                        @log "found #{key} with:", val
+                        @emit 'load', key, val if val?
+                catch err
+                    @log "issue during processing the db file at #{filename}"
                 @emit 'ready'
             @db._writeStream.on 'error', (err) =>
                 @log err
-            @db._writeStream.on 'open', =>
-                @log "loaded #{filename}"
         else
             @emit 'ready'
 
@@ -226,14 +228,16 @@ class StormAgent extends EventEmitter
             if storm.plugins?
                 @log "import - [#{id}] available plugins:", storm.plugins
                 for plugfile in storm.plugins
-                    plugin = require("#{id}/#{plugfile}")
-                    continue unless plugin
-                    @log "import - [#{id}] found valid plugin at #{plugfile}"
-                    @include plugin if @state.running
-                    # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
-                    @on 'running', (@include) =>
-                        @log "loading storm-compatible plugin for: #{id}/#{plugfile}"
-                        @include plugin
+                    do (plugfile) =>
+                        plugin = require("#{id}/#{plugfile}")
+                        return unless plugin
+
+                        @log "import - [#{id}] found valid plugin at #{plugfile}"
+                        @include plugin if @state.running
+                        # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
+                        @on 'running', (@include) =>
+                            @log "loading storm-compatible plugin for: #{id}/#{plugfile}"
+                            @include plugin
         catch err
             @log "import - [#{id}] is not a storm compatible module: "+err
 
@@ -264,7 +268,10 @@ class StormAgent extends EventEmitter
 
         # simple helper wrapper to issue a call with STORM authorization header
         srequest = (method, url, storm, callback) ->
-            method( url, (err, res, body) ->
+            method(
+                uri: url
+                timeout: 2000
+              , (err, res, body) ->
                 callback err, res, body if callback?
             ).auth storm.skey, storm.token if method? and method instanceof Function and url? and storm?
 
