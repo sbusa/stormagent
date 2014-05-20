@@ -58,7 +58,7 @@ class StormRegistry extends EventEmitter
             @remove key
         @log "adding #{entry.id} into entries"
         entry.id ?= key ? uuid.v4()
-        entry.saved ?= saved ? false
+        entry.saved ?= false
         if @db? and not entry.saved
             data = entry
             data = entry.data if entry instanceof StormData
@@ -74,9 +74,9 @@ class StormRegistry extends EventEmitter
     remove: (key) ->
         @log "removing #{key} from entries"
         @emit 'removed', @entries[key]
-        delete @entries[key]
         if @db? and @entries[key]? and @entries[key].saved
             @db.rm key
+            delete @entries[key]
 
     update: (key, entry) ->
         if @db? and not entry.saved
