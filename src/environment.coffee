@@ -29,7 +29,7 @@ class Environment
         callback() unless provider? and provider.metaurl?
         util.log "making a request to #{provider.metaurl}..."
         request
-            uri: provider.metaurl
+            url: provider.metaurl
             timeout: 2000
           , (err, res, body) ->
             if err
