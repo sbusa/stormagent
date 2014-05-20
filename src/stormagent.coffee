@@ -269,7 +269,7 @@ class StormAgent extends EventEmitter
         # simple helper wrapper to issue a call with STORM authorization header
         srequest = (method, url, storm, callback) ->
             method(
-                uri: url
+                url: url
                 timeout: 2000
               , (err, res, body) ->
                 callback err, res, body if callback?
