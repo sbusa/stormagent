@@ -314,7 +314,8 @@ class StormAgent extends EventEmitter
                                         agent = JSON.parse body
                                         @state.id = storm.id = agent.id
                                         next null, storm
-                                    else next err
+                                    else
+                                        next new Error "received #{res.statusCode} from stormtracker"
                             catch error
                                 @log "unable to lookup agent ID: "+ error
                                 next error
@@ -356,12 +357,14 @@ class StormAgent extends EventEmitter
                         @log "requesting CSR signing from #{storm.tracker}..."
                         r = srequest request.post, "#{storm.tracker}/agents/#{storm.id}/csr", storm, (err, res, body) =>
                             try
+                                next err if err
                                 switch res.statusCode
                                     when 200
                                         # do something
                                         storm.bolt.cert = body
                                         next null, storm
-                                    else next err
+                                    else
+                                        next new Error "received #{res.statusCode} from stormtracker"
                             catch error
                                 @log "unable to post CSR to get signed by stormtracker"
                                 next error
@@ -377,12 +380,14 @@ class StormAgent extends EventEmitter
                         @log "retrieving stormbolt configs from stormtracker..."
                         srequest request, "#{storm.tracker}/agents/#{storm.id}/bolt", storm, (err, res, body) =>
                             try
+                                next err if err
                                 switch res.statusCode
                                     when 200
                                         bolt = JSON.parse body
                                         storm.bolt = @extend(storm.bolt,bolt)
                                         next null, storm
-                                    else next err
+                                    else
+                                        next new Error "received #{res.statusCode} from stormtracker"
                             catch error
                                 @log "unable to retrieve stormbolt configs"
                                 next error
