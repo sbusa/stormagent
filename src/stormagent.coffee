@@ -76,7 +76,7 @@ class StormRegistry extends EventEmitter
         @emit 'removed', @entries[key]
         if @db? and @entries[key]? and @entries[key].saved
             @db.rm key
-            delete @entries[key]
+        delete @entries[key]
 
     update: (key, entry) ->
         if @db? and not entry.saved
@@ -116,13 +116,12 @@ class StormAgent extends EventEmitter
     validate = require('json-schema').validate
     fs = require 'fs'
     path = require 'path'
-    extend = require('util')._extend
 
     constructor: (config) ->
 
         # private helper functions
         @log = stormlog
-
+        @extend = extend = require('util')._extend
         @newdb = (filename,callback) ->
 
         @timestamp = ->
@@ -220,7 +219,7 @@ class StormAgent extends EventEmitter
 
             if storm.functions?
                 @log "import - [#{id}] extending config and functions..."
-                @config = extend( @config, pkgconfig) unless @state.running
+                @config = @extend( @config, pkgconfig) unless @state.running
                 delete @config.storm # we don't need the storm property
                 @log "import - [#{id}] available functions:", storm.functions
                 @functions.push storm.functions... if storm.functions?
@@ -381,7 +380,7 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         bolt = JSON.parse body
-                                        storm.bolt = extend(storm.bolt,bolt)
+                                        storm.bolt = @extend(storm.bolt,bolt)
                                         next null, storm
                                     else next err
                             catch error
