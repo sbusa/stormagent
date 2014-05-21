@@ -306,7 +306,7 @@ class StormAgent extends EventEmitter
                             return next null, storm
 
                         @log "looking up agent ID from stormtracker... #{storm.tracker}"
-                        srequest request, "#{storm.tracker}/serialkey/#{storm.skey}", storm, (err, res, body) =>
+                        srequest request, "#{storm.tracker}/agents/serialkey/#{storm.skey}", storm, (err, res, body) =>
                             try
                                 next err if err
                                 switch res.statusCode
@@ -354,7 +354,7 @@ class StormAgent extends EventEmitter
                             return next null,storm
 
                         @log "requesting CSR signing from #{storm.tracker}..."
-                        r = srequest request.post, "#{storm.tracker}/#{storm.id}/csr", storm, (err, res, body) =>
+                        r = srequest request.post, "#{storm.tracker}/agents/#{storm.id}/csr", storm, (err, res, body) =>
                             try
                                 switch res.statusCode
                                     when 200
@@ -375,7 +375,7 @@ class StormAgent extends EventEmitter
                             return next null,storm
 
                         @log "retrieving stormbolt configs from stormtracker..."
-                        srequest request, "#{storm.tracker}/#{storm.id}/bolt", storm, (err, res, body) =>
+                        srequest request, "#{storm.tracker}/agents/#{storm.id}/bolt", storm, (err, res, body) =>
                             try
                                 switch res.statusCode
                                     when 200
