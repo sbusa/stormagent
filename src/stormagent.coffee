@@ -354,6 +354,7 @@ class StormAgent extends EventEmitter
                                     @log "CSR generation completed:", res.csr
                                     storm.csr = res.csr
                                     storm.bolt.key = res.clientKey
+                                    storm.bolt.key = new Buffer storm.bolt.key unless storm.bolt.key instanceof Buffer
                                     next null, storm
                                 else
                                     new Error "CSR generation failure"
