@@ -374,11 +374,18 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         # do something
-                                        if body.data? and body.encoding?
-                                            @log "decoding signed cert data with #{body.encoding}"
-                                            storm.bolt.cert = new Buffer body.data, body.encoding
-                                        else
-                                            storm.bolt.cert = body
+                                        try
+                                            cert = JSON.parse body
+                                            if cert.data? and cert.encoding?
+                                                @log "decoding signed cert data with #{body.encoding}"
+                                                storm.bolt.cert = new Buffer cert.data, cert.encoding
+                                            else
+                                                @log "unkown format for cert... leaving cert AS-IS"
+                                                storm.bolt.cert = body
+                                        catch err
+                                            @log "provided cert is not JSON... treating as string"
+                                            storm.bolt.cert = new Buffer body
+
                                         next null, storm
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
