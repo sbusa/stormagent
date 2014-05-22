@@ -28,6 +28,7 @@ class Environment
 
         return callback() unless provider? and provider.metaurl?
 
+        error = false
         util.log "making a request to #{provider.metaurl}..."
         request
             url: provider.metaurl
@@ -35,7 +36,9 @@ class Environment
           , (err, res, body) ->
             if err
                 util.log "request failed: "+err
-                return callback()
+                unless error
+                    error = true
+                    return callback()
 
             try
                 util.log "#{provider.name} metadata http response statusCode: " + res.statusCode
