@@ -52,7 +52,7 @@ class StormRegistry extends EventEmitter
             @emit 'ready'
 
     add: (key, entry) ->
-        return unless entry?
+        return unless key? and entry?
         match = @get key
         if match?
             @remove key
@@ -69,16 +69,22 @@ class StormRegistry extends EventEmitter
         entry
 
     get: (key) ->
+        return unless key?
         @entries[key]
 
     remove: (key) ->
+        return unless key? and key in @entries
         @log "removing #{key} from entries"
-        @emit 'removed', @entries[key]
-        if @db? and @entries[key]? and @entries[key].saved
-            @db.rm key
+        entry = @entries[key]
+        # delete the key from obj first...
         delete @entries[key]
+        @emit 'removed', entry if entry?
+        # check if data-backend and there is an entry that's been saved
+        if @db? and entry? and entry.saved
+            @db.rm key
 
     update: (key, entry) ->
+        return unless key? and entry?
         if @db? and not entry.saved
             data = entry
             data = entry.data if entry instanceof StormData
