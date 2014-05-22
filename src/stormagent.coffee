@@ -29,8 +29,6 @@ class StormData extends EventEmitter
 async = require 'async'
 class StormRegistry extends EventEmitter
 
-    crypto = require 'crypto' # for checksum capability on registry
-
     constructor: (filename) ->
         @log = stormlog
 
@@ -100,6 +98,7 @@ class StormRegistry extends EventEmitter
         @get key for key of @entries
 
     checksum: ->
+        crypto = require 'crypto' # for checksum capability on registry
         md5 = crypto.createHash "md5"
         md5.update key for key,entry of @entries
         md5.digest "hex"
