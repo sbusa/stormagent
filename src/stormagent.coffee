@@ -73,7 +73,7 @@ class StormRegistry extends EventEmitter
         @entries[key]
 
     remove: (key) ->
-        return unless key? and key in @entries
+        return unless key?
         @log "removing #{key} from entries"
         entry = @entries[key]
         # delete the key from obj first...
