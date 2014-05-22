@@ -412,12 +412,11 @@ class StormAgent extends EventEmitter
                         @log "activation completed successfully"
                         @state.activated = true
                         @emit "activated", storm
-                        repeat
+                        repeat storm
 
             (err) => # final call
-                unless err
-                    @log "final call on until..."
-                    callback storm if callback?
+                @log "final call on until..."
+                callback storm if callback?
         )
 
 module.exports = StormAgent
