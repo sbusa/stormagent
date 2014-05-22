@@ -29,6 +29,8 @@ class StormData extends EventEmitter
 async = require 'async'
 class StormRegistry extends EventEmitter
 
+    crypto = require 'crypto' # for checksum capability on registry
+
     constructor: (filename) ->
         @log = stormlog
 
@@ -96,6 +98,11 @@ class StormRegistry extends EventEmitter
 
     list: ->
         @get key for key of @entries
+
+    checksum: ->
+        md5 = crypto.createHash "md5"
+        md5.update key for key,entry of @entries
+        md5.digest "hex"
 
     expires: (interval) ->
         async.whilst(
@@ -282,7 +289,7 @@ class StormAgent extends EventEmitter
 
         async.until(
             () => # test condition
-                @state.activated? and @state.activated
+                @state.activated
 
             (repeat) => # repeat function
                 count++
@@ -372,7 +379,7 @@ class StormAgent extends EventEmitter
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
                             catch error
-                                @log "unable to post CSR to get signed by stormtracker"
+                                @log "unable to post CSR to get signed by stormtracker", error
                                 next error
 
                         form = r.form()
@@ -399,18 +406,19 @@ class StormAgent extends EventEmitter
                                 next error
 
                 ], (err, storm) => # finally
-                    if storm?
+                    if err or not storm
+                        @log "error during activation:", err
+                        setTimeout repeat, @config.repeatdelay
+                    else
                         @log "activation completed successfully"
                         @state.activated = true
                         @emit "activated", storm
-                        repeat null, storm
-                    else
-                        @log "error during activation: #{err}"
-                        setTimeout repeat, @config.repeatdelay
+                        repeat
 
-            (err, storm) => # final call
-                @log "final call on until..."
-                callback err, storm if callback?
+            (err) => # final call
+                unless err
+                    @log "final call on until..."
+                    callback storm if callback?
         )
 
 module.exports = StormAgent

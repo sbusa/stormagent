@@ -26,7 +26,8 @@ class Environment
     check: (provider, callback) ->
         # here, we actually should handle case where provider.metaurl is NOT set
 
-        callback() unless provider? and provider.metaurl?
+        return callback() unless provider? and provider.metaurl?
+
         util.log "making a request to #{provider.metaurl}..."
         request
             url: provider.metaurl
