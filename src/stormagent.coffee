@@ -373,7 +373,11 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         # do something
-                                        storm.bolt.cert = body
+                                        if body.data? and body.encoding?
+                                            @log "decoding signed cert data with #{body.encoding}"
+                                            storm.bolt.cert = new Buffer body.data, body.encoding
+                                        else
+                                            storm.bolt.cert = body
                                         next null, storm
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
@@ -396,7 +400,11 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         bolt = JSON.parse body
-                                        storm.bolt = @extend(storm.bolt,bolt)
+                                        throw new Error "missing bolt.ca!" unless bolt.ca?
+                                        if bolt.ca.data? and bolt.ca.encoding?
+                                            @log "decoding signed cert data with #{body.encoding}"
+                                            bolt.ca = new Buffer bolt.ca.data, bolt.ca.encoding
+                                        storm.bolt = @extend(storm.bolt, bolt)
                                         next null, storm
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
