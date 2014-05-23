@@ -1,3 +1,17 @@
+# process environmental variables
+for key,val of process.env
+    match = "#{key}".match /^npm_package_config_(.*)$/
+    if match?
+        console.log "found npm package config #{match} = #{val}"
+
+nconf = require 'nconf'
+nconf.use('memory').argv().env()
+
+console.log nconf.get 'npm:package:config:port'
+
+return
+
+
 argv = require('minimist')(process.argv.slice(2))
 if argv.h?
     console.log """
@@ -33,6 +47,8 @@ storm =
         listenPort: 443
         beaconInterval: 10
         beaconRetry: 3
+
+
 
 # start the stormagent instance
 StormAgent = require './stormagent'

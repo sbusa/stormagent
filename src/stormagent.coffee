@@ -161,6 +161,12 @@ class StormAgent extends EventEmitter
         # import self into self
         @import module
 
+        # process environmental variables
+        for key,val of process.env
+            match = "#{key}".match /^npm_package_config_(.*)$/
+            if match?
+                @log "found npm package config #{match} = #{val}"
+
         @config = extend(@config, config) if config?
         @log "agent.config", @config
         @log "agent.functions", @functions
@@ -215,6 +221,7 @@ class StormAgent extends EventEmitter
             _agent.emit 'running', @include
 
     import: (id) ->
+        #@log "import - id:", id
         if id instanceof Object and id.filename?
             self = true
             # let's find the module root dir
@@ -257,6 +264,9 @@ class StormAgent extends EventEmitter
             require("#{id}") unless self? and self
         catch err
             @log "import - [#{id}] failed with: "+err
+
+    imports: (modules...) ->
+        @import module for module in modules
 
     execute: (command, callback) ->
         unless command
