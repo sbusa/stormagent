@@ -52,7 +52,7 @@ class StormRegistry extends EventEmitter
             @emit 'ready'
 
     add: (key, entry) ->
-        return unless key? and entry?
+        return unless entry?
         match = @get key
         if match?
             @remove key
