@@ -486,6 +486,8 @@ if require.main is module
     config.logfile = argv.l ? "/var/log/stormagent.log"
     config.datadir = argv.d ? "/var/stormstack"
 
+    storm = null # override during dev
+
     agent = new StormAgent config
     #
     # activation and establishment of bolt channel is *optionally* handled at the application layer
