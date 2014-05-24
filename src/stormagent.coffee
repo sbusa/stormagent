@@ -216,7 +216,13 @@ class StormAgent extends EventEmitter
         if @config.logfile?
             @log "redirecting console.log to #{@config.logfile}..."
             try
-                proc.stdout.pipe(fs.createWriteStream @config.logfile, { flags: 'a' })
+                logfile=fs.createWriteStream @config.logfile, { flags: 'a' }
+                logfile.on 'open', =>
+                    @log "starting console.log redirection..."
+                logfile.on 'error', (err) =>
+                    @log "unable to redirect stdout due to:", err
+                process.stdout.pipe(logfile)
+                process.stderr.pipe(logfile)
             catch err
                 @log "unable to redirect stdout due to:", err
 
