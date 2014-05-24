@@ -218,15 +218,14 @@ class StormAgent extends EventEmitter
             try
                 logfile=fs.createWriteStream @config.logfile, { flags: 'a' }
                 logfile.on 'open', =>
-                    @log "starting console.log redirection..."
+                    @log "starting stdout/stderr redirection..."
+                    process.__defineGetter__ "stdout", -> logfile
+                    process.__defineGetter__ "stderr", -> logfile
+                    @log 'running with: ', @config
                 logfile.on 'error', (err) =>
                     @log "unable to redirect stdout due to:", err
-                process.stdout.pipe(logfile)
-                process.stderr.pipe(logfile)
             catch err
                 @log "unable to redirect stdout due to:", err
-
-        @log 'running with: ', @config
 
         {@app} = require('zappajs') @config.port, ->
             morgan = require('morgan')

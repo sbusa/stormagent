@@ -1,18 +1,19 @@
 # process environmental variables
 
-util = require 'util'
+#util = require 'util'
 
 #util.log util.inspect process
 
 for key,val of process.env
+    console.log "#{key} = #{val}"
     match = "#{key}".match /^npm_package_config_(.*)$/
     if match?
         console.log "found npm package config #{match} = #{val}"
 
-nconf = require 'nconf'
-nconf.use('memory').argv().env()
+#nconf = require 'nconf'
+#nconf.use('memory').argv().env()
 
-console.log nconf.get 'npm:package:config:port'
+#console.log nconf.get 'npm:package:config:port'
 
 return
 
