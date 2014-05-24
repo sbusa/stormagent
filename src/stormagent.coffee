@@ -53,18 +53,18 @@ class StormRegistry extends EventEmitter
 
     add: (key, entry) ->
         return unless entry?
-        match = @get key
-        if match?
-            @remove key
-        @log "adding #{entry.id} into entries"
-        entry.id ?= key ? uuid.v4()
+        @remove key if @get key
+
+        key ?= uuid.v4() # if no key provided, dynamically generate one
+        @log "adding #{key} into entries"
+        entry.id ?= key
         entry.saved ?= false
         if @db? and not entry.saved
             data = entry
             data = entry.data if entry instanceof StormData
-            @db.set entry.id, data
+            @db.set key, data
             entry.saved = true
-        @entries[entry.id] = entry
+        @entries[key] = entry
         @emit 'added', entry
         entry
 
@@ -88,7 +88,7 @@ class StormRegistry extends EventEmitter
         if @db? and not entry.saved
             data = entry
             data = entry.data if entry instanceof StormData
-            @db.set entry.id, data
+            @db.set key, data
             entry.saved = true
         @entries[key] = entry
         @emit 'updated', entry
@@ -103,7 +103,12 @@ class StormRegistry extends EventEmitter
         md5.update key for key,entry of @entries
         md5.digest "hex"
 
-    expires: (interval) ->
+    expires: (interval,validity) ->
+        # initialize validity if not already set
+        validity ?= 60 * 60
+        for key,entry of @entries
+             do (entry) -> entry.validity ?= validity
+
         async.whilst(
             () => # test condition
                 @running
@@ -128,12 +133,12 @@ class StormAgent extends EventEmitter
     validate = require('json-schema').validate
     fs = require 'fs'
     path = require 'path'
+    extend = require('util')._extend
 
     constructor: (config) ->
 
         # private helper functions
         @log = stormlog
-        @extend = extend = require('util')._extend
         @newdb = (filename,callback) ->
 
         @timestamp = ->
@@ -167,7 +172,7 @@ class StormAgent extends EventEmitter
             if match?
                 @log "found npm package config #{match} = #{val}"
 
-        @config = extend(@config, config) if config?
+        @config = extend @config, config if config?
         @log "agent.config", @config
         @log "agent.functions", @functions
 
@@ -175,7 +180,6 @@ class StormAgent extends EventEmitter
 
         ###
         @log "setting up directories..."
-        fs=require('fs')
         try
             fs.mkdirSync("#{config.datadir}") unless fs.existsSync("#{config.datadir}")
             fs.mkdirSync("#{config.datadir}/db")  unless fs.existsSync("#{config.datadir}/db")
@@ -190,7 +194,7 @@ class StormAgent extends EventEmitter
 
     # public functions
     status: ->
-        @state.config = JSON.parse(JSON.stringify(@config))
+        @state.config = extend {},@config
         delete @state.config.ca
         delete @state.config.cert
         delete @state.config.key
@@ -198,8 +202,23 @@ class StormAgent extends EventEmitter
         @state
 
     # starts the agent web services API
-    run: ->
+    run: (config, schema) ->
         _agent = @;
+
+        if config?
+            if schema?
+                res = validate config, schema
+                @log 'run - validation of runtime config:', res
+                @config = extend @config, config if res.valid
+            else
+                @config = extend @config, config
+
+        if @config.logfile?
+            @log "redirecting console.log to #{@config.logfile}..."
+            try
+                proc.stdout.pipe(fs.createWriteStream @config.logfile, { flags: 'a' })
+            catch err
+                @log "unable to redirect stdout due to:", err
 
         @log 'running with: ', @config
 
@@ -238,7 +257,7 @@ class StormAgent extends EventEmitter
 
             if storm.functions?
                 @log "import - [#{id}] extending config and functions..."
-                @config = @extend( @config, pkgconfig) unless @state.running
+                @config = extend( @config, pkgconfig) unless @state.running
                 delete @config.storm # we don't need the storm property
                 @log "import - [#{id}] available functions:", storm.functions
                 @functions.push storm.functions... if storm.functions?
@@ -422,7 +441,7 @@ class StormAgent extends EventEmitter
                                         if bolt.ca.data? and bolt.ca.encoding?
                                             @log "decoding signed cert data with #{body.encoding}"
                                             bolt.ca = new Buffer bolt.ca.data, bolt.ca.encoding
-                                        storm.bolt = @extend(storm.bolt, bolt)
+                                        storm.bolt = extend(storm.bolt, bolt)
                                         next null, storm
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
@@ -449,10 +468,43 @@ module.exports = StormAgent
 module.exports.StormData = StormData
 module.exports.StormRegistry = StormRegistry
 
-# Garbage collect every 2 sec
-# Run node with --expose-gc
-if gc?
+#-------------------------------------------------------------------------------------------
+
+if require.main is module
+    argv = require('minimist')(process.argv.slice(2))
+    if argv.h?
+        console.log """
+            -h view this help
+            -p port number
+            -l logfile
+            -d datadir
+        """
+        return
+
+    config = {}
+    config.port    = argv.p ? 5000
+    config.logfile = argv.l ? "/var/log/stormagent.log"
+    config.datadir = argv.d ? "/var/stormstack"
+
+    agent = new StormAgent config
+    #
+    # activation and establishment of bolt channel is *optionally* handled at the application layer
+    #
+    agent.on "running", ->
+        @log "unit testing..."
+        @log "#1 - agent.env.discover", @env.discover()
+        @log "#2 - agent.env.os", @env.os()
+        @log "#3 - agent.activate"
+        @activate storm, (err, status) =>
+            @log "activation completed with", status
+
+    agent.on "activated", (storm) ->
+        @log "activated with:", storm
+
+    agent.run()
+
+    # Garbage collect every 2 sec
+    # Run node with --expose-gc
     setInterval (
         () -> gc()
-    ), 2000
-
+    ), 2000 if gc?

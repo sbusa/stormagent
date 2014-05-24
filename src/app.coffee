@@ -1,4 +1,9 @@
 # process environmental variables
+
+util = require 'util'
+
+#util.log util.inspect process
+
 for key,val of process.env
     match = "#{key}".match /^npm_package_config_(.*)$/
     if match?
@@ -11,21 +16,6 @@ console.log nconf.get 'npm:package:config:port'
 
 return
 
-
-argv = require('minimist')(process.argv.slice(2))
-if argv.h?
-    console.log """
-        -h view this help
-        -p port number
-        -l logfile
-        -d datadir
-    """
-    return
-
-config = {}
-config.port    = argv.p ? 5000
-config.logfile = argv.l ? "/var/log/stormagent.log"
-config.datadir = argv.d ? "/var/stormstack"
 
 # COMMENT OUT below "storm" object FOR REAL USE
 # test storm data for manual config
