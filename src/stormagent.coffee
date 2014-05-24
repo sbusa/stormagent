@@ -56,9 +56,9 @@ class StormRegistry extends EventEmitter
         @remove key if @get key
 
         key ?= uuid.v4() # if no key provided, dynamically generate one
-        @log "adding #{key} into entries"
         entry.id ?= key
         entry.saved ?= false
+        @log "adding #{key} into entries"
         if @db? and not entry.saved
             data = entry
             data = entry.data if entry instanceof StormData
