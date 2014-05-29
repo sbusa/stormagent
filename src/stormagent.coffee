@@ -435,16 +435,16 @@ class StormAgent extends EventEmitter
                         if storm.bolt.ca?
                             return next null,storm
 
-                        @log "retrieving stormbolt configs from stormtracker..."
                         srequest request, "#{storm.tracker}/agents/#{storm.id}/bolt", storm, (err, res, body) =>
                             try
                                 next err if err
                                 switch res.statusCode
                                     when 200
                                         bolt = JSON.parse body
+                                        @log "retrieving stormbolt configs from stormtracker...",bolt
                                         throw new Error "missing bolt.ca!" unless bolt.ca?
                                         if bolt.ca.data? and bolt.ca.encoding?
-                                            @log "decoding signed cert data with #{body.encoding}"
+                                            @log "decoding signed cert data with #{bolt.ca.encoding}"
                                             bolt.ca = new Buffer bolt.ca.data, bolt.ca.encoding
                                         storm.bolt = extend(storm.bolt, bolt)
                                         next null, storm
