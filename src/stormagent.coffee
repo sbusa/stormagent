@@ -464,9 +464,10 @@ class StormAgent extends EventEmitter
                         @emit "activated", storm
                         repeat storm
 
-            (err) => # final call
-                @log "final call on until..."
-                callback storm if callback?
+            (storm) => # final call
+                @log "final call on until...",storm
+                unless storm instanceof Error
+                    callback storm if callback?
         )
 
 module.exports = StormAgent
@@ -514,4 +515,4 @@ if require.main is module
     # Run node with --expose-gc
     setInterval (
         () -> gc()
-    ), 2000 if gc?
+    ), 60000 if gc?
