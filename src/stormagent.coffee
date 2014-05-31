@@ -118,7 +118,7 @@ class StormRegistry extends EventEmitter
                         @remove key
                         continue
                     do (key,entry) =>
-                        @log "DEBUG: #{key} has validity=#{entry.validity}"
+                        #@log "DEBUG: #{key} has validity=#{entry.validity}"
                         @entries[key].validity -= interval / 1000
                         unless @entries[key].validity > 1
                             @remove key
