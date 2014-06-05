@@ -286,7 +286,10 @@ class StormAgent extends EventEmitter
                         # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
                         @on 'running', (@include) =>
                             @log "loading storm-compatible plugin for: #{id}/#{plugfile}"
-                            @include plugin
+                            try
+                                @include plugin
+                            catch err
+                                @log "Unable to include the plugin #{plugin}!! #{err}"
         catch err
             @log "import - [#{id}] is not a storm compatible module: "+err
 
