@@ -190,6 +190,7 @@ class StormAgent extends EventEmitter
 
         # handle when StormAgent webapp ready
         @on 'running', (@include) =>
+            console.log "we are running now..."
             @state.running = true
 
     # public functions
@@ -200,6 +201,13 @@ class StormAgent extends EventEmitter
         delete @state.config.key
         @state.os = @env.os()
         @state
+
+    validate: (input,schema) ->
+        if schema?
+            res = validate input, schema
+            res.valid
+        else
+            true
 
     # starts the agent web services API
     run: (config, schema) ->
@@ -241,7 +249,6 @@ class StormAgent extends EventEmitter
               development: => @use errorHandler: {dumpExceptions: on, showStack: on}
               production: => @use 'errorHandler'
 
-            @enable 'serve jquery'
             _agent.emit 'running', @include
 
     import: (id) ->
