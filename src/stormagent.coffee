@@ -523,9 +523,3 @@ if require.main is module
         @log "activated with:", storm
 
     agent.run()
-
-    # Garbage collect every 2 sec
-    # Run node with --expose-gc
-    setInterval (
-        () -> gc()
-    ), 60000 if gc?
