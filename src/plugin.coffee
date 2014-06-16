@@ -6,7 +6,7 @@
     schema = {}
     agent = @settings.agent
 
-    @get '/': ->
+    @get '/status': ->
         @send agent.status()
 
 # /environment
