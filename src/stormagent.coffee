@@ -199,6 +199,9 @@ class StormAgent extends EventEmitter
         delete @state.config.ca
         delete @state.config.cert
         delete @state.config.key
+        delete @state.env.bolt.ca
+        delete @state.env.bolt.cert
+        delete @state.env.bolt.key
         @state.os = @env.os()
         @state
 
@@ -286,7 +289,10 @@ class StormAgent extends EventEmitter
                         # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
                         @on 'running', (@include) =>
                             @log "loading storm-compatible plugin for: #{id}/#{plugfile}"
-                            @include plugin
+                            try
+                                @include plugin
+                            catch err
+                                @log "Unable to include the plugin #{plugin}!! #{err}"
         catch err
             @log "import - [#{id}] is not a storm compatible module: "+err
 
@@ -517,9 +523,3 @@ if require.main is module
         @log "activated with:", storm
 
     agent.run()
-
-    # Garbage collect every 2 sec
-    # Run node with --expose-gc
-    setInterval (
-        () -> gc()
-    ), 60000 if gc?
