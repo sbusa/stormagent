@@ -199,9 +199,10 @@ class StormAgent extends EventEmitter
         delete @state.config.ca
         delete @state.config.cert
         delete @state.config.key
-        delete @state.env.bolt.ca
-        delete @state.env.bolt.cert
-        delete @state.env.bolt.key
+        if @state.env? and @state.env.bolt?
+            delete @state.env.bolt.ca
+            delete @state.env.bolt.cert
+            delete @state.env.bolt.key
         @state.os = @env.os()
         @state
 
