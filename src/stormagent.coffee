@@ -33,7 +33,7 @@ class StormRegistry extends EventEmitter
         @log = stormlog
 
         @running = true
-        @entries = []
+        @entries = {}
 
         if filename
             @db = require('dirty') "#{filename}"
