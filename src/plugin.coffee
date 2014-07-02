@@ -4,24 +4,17 @@
 
     validate = require('json-schema').validate
     schema = {}
+    agent = @settings.agent
 
-    @get '/': ->
-        agent = @settings.agent
-        res = agent.env.os()
-        console.log res
-        @send res
+    @get '/status': ->
+        @send agent.status()
 
 # /environment
 
     @get '/environment': ->
-        res = @settings.agent.env.os()
+        res = agent.env.os()
         console.log res
         @send res
-
-    @get '/bolt': ->
-       x= require('./activation').getBoltData()
-       console.log x
-       @send x
 
 # /personality
     schema.personality =
