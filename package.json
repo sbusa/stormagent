@@ -10,10 +10,6 @@
 		"url": "git://github.com/stormstack/stormagent.git"
 	},
 	"dependencies": {
-		"zappajs": "0.4.x",
-		"morgan": "1.0.x",
-	    "passport" :"0.2.x",
-	    "passport-http" :"0.2.x",
 		"request": "2.34.x",
 		"json-schema": "0.2.0",
 		"async": "0.8.x",
@@ -21,7 +17,8 @@
 		"minimist":"0.1.0",
 		"find-in-path":"0.0.x",
 		"pem": "1.4.x",
-		"dirty": "0.9.x"
+		"dirty": "0.9.x",
+        "restify": "1.4.3"
 	},
 	"devDependencies": {
 		"coffee-script": ">=1.3"
