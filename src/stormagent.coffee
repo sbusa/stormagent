@@ -163,6 +163,7 @@ class StormAgent extends EventEmitter
         @config ?= {}
         @functions ?= []
 
+        @agent = @;
         # import self into self
         @import module
 
@@ -241,6 +242,7 @@ class StormAgent extends EventEmitter
 
         logRequest = (request, response, next) =>
             @log "REQUEST", request.toString()
+            next()
 
         restify = require('restify')
         @server = restify.createServer {name:'stormstack'}
@@ -250,8 +252,9 @@ class StormAgent extends EventEmitter
         @server.listen @config.port
 
         @include = (plugin) =>
+            @log "About to include the plugin ", plugin
             that = @
-            plugin.call that
+            plugin.include.call that
 
         _agent.emit 'running', @include
 

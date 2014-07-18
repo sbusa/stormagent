@@ -1,20 +1,23 @@
 # stormagent API endpoints
 
-@include = ->
+include = ->
 
     validate = require('json-schema').validate
     schema = {}
-    agent = @settings.agent
+    console.log " what we got", agent, @agent
+    agent = @agent
 
-    @get '/status': ->
-        @send agent.status()
+    @server.get  '/status', (req, res, next)  ->
+        res.send agent.status()
+        next()
 
 # /environment
 
-    @get '/environment': ->
-        res = agent.env.os()
+    @server.get '/environment', (req, res, next)  ->
+        resp = agent.env.os()
         console.log res
-        @send res
+        send resp
+        next()
 
 # /personality
     schema.personality =
@@ -28,20 +31,20 @@
                 contents: { type: "string", required: true }
                 postxfer: { type: "string" }
 
-    @post '/personality': ->
+    @server.post '/personality', (req, res, next)  ->
         console.log 'performing schema validation on incoming service JSON'
 
         #console.log @body
 
-        result = validate @body, schema.personality
+        result = validate req.body, schema.personality
         console.log result
-        return @next new Error "Invalid personality posting!: #{result.errors}" unless result.valid
+        return next new Error "Invalid personality posting!: #{result.errors}" unless result.valid
 
         fs = require 'fs'
         exec = require('child_process').exec
         path = require 'path'
 
-        for p in @body.personality
+        for p in req.body.personality
             #console.log p
             do (p) ->
                 console.log "writing personality to #{p.path}..."
@@ -65,5 +68,7 @@
                                 console.log "issuing '#{p.postxfer}'... stderr: #{stderr}" if error
                                 console.log "issuing '#{p.postxfer}'... stdout: #{stdout}" unless error
 
-        @send { result: 'success' }
+        res.send { result: 'success' }
+        next()
 
+module.exports.include = include
