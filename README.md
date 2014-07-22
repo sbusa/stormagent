@@ -1,7 +1,32 @@
 stormagent
 ==========
 
-A base class for all stormstack agents
+A base class for all stormstack agents.
+
+stormagent has a in-built webserver for providing the REST API services, which can also be used by the storm plugins and the derived classes for importing their REST API services in to the stormagent framework.
+
+stormagent proivdes the facility to dynamically include the REST API services in to the stormagent web framework while stormagent is running. 
+
+The plugin module should specify the storm configuration in the package.json in the below format.
+```
+"config" : 
+{
+    config params
+    "storm": 
+    {
+    "functions": []
+    "events": []
+    "plugins": []
+    }
+}
+```
+Stormagent verifies the config to ensure the module is compatible with storm. otherwise it ignores the plugin.
+
+Refer : package.json of the stormbolt,openvpn-storm.
+
+Also it provides, the universal logging mechanism which can be used the plugins and derived classes for logging.
+
+Stormflash also perform the Environment discovery & Activation.
 
 
 *List of stormagent APIs*
@@ -26,7 +51,7 @@ A base class for all stormstack agents
 **POST personality API**
 
     Verb      URI                       Description
-    POST      /personality              Upload a file with given content in VCG/CPE.
+    POST      /personality              Upload a file with given content in VCG/CPE and execute the binary mentioned in "postxfer".
 
 
 **Example Request and Response**
