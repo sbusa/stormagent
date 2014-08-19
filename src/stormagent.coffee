@@ -10,123 +10,7 @@ stormlog = (message, obj) ->
     util.log out if out?
 
 uuid = require('node-uuid')
-class StormData extends EventEmitter
-
-    validate = require('json-schema').validate
-
-    constructor: (@id, @data, schema) ->
-        @log = stormlog
-
-        if schema?
-            res = validate data, schema
-            unless res.valid
-                throw new Error "unable to validate passed in data during StormData creation! "+ util.inspect res
-
-        @id ?= uuid.v4()
-        @validity = data.validity if data?
-        @saved = false
-
 async = require 'async'
-class StormRegistry extends EventEmitter
-
-    constructor: (filename) ->
-        @log = stormlog
-
-        @running = true
-        @entries = {}
-
-        if filename
-            @db = require('dirty') "#{filename}"
-            @db.on 'load', =>
-                @log "loaded #{filename}"
-                try
-                    @db.forEach (key,val) =>
-                        @log "found #{key} with:", val
-                        @emit 'load', key, val if val?
-                catch err
-                    @log "issue during processing the db file at #{filename}"
-                @emit 'ready'
-            @db._writeStream.on 'error', (err) =>
-                @log err
-        else
-            @emit 'ready'
-
-    add: (key, entry) ->
-        return unless entry?
-        @remove key if @get key
-
-        key ?= uuid.v4() # if no key provided, dynamically generate one
-        entry.id ?= key
-        entry.saved ?= false
-        @log "adding #{key} into entries"
-        if @db? and not entry.saved
-            data = entry
-            data = entry.data if entry instanceof StormData
-            @db.set key, data
-            entry.saved = true
-        @entries[key] = entry
-        @emit 'added', entry
-        entry
-
-    get: (key) ->
-        return unless key?
-        @entries[key]
-
-    remove: (key) ->
-        return unless key?
-        @log "removing #{key} from entries"
-        entry = @entries[key]
-        # delete the key from obj first...
-        delete @entries[key]
-        @emit 'removed', entry if entry?
-        # check if data-backend and there is an entry that's been saved
-        if @db? and entry? and entry.saved
-            @db.rm key
-
-    update: (key, entry) ->
-        return unless key? and entry?
-        if @db? and not entry.saved
-            data = entry
-            data = entry.data if entry instanceof StormData
-            @db.set key, data
-            entry.saved = true
-        @entries[key] = entry
-        @emit 'updated', entry
-        entry
-
-    list: ->
-        @get key for key of @entries
-
-    checksum: ->
-        crypto = require 'crypto' # for checksum capability on registry
-        md5 = crypto.createHash "md5"
-        md5.update key for key,entry of @entries
-        md5.digest "hex"
-
-    expires: (interval,validity) ->
-        # initialize validity if not already set
-        validity ?= 60 * 60
-        for key,entry of @entries
-             do (entry) -> entry.validity ?= validity
-
-        async.whilst(
-            () => # test condition
-                @running
-            (repeat) =>
-                for key,entry of @entries
-                    unless entry?
-                        @remove key
-                        continue
-                    do (key,entry) =>
-                        #@log "DEBUG: #{key} has validity=#{entry.validity}"
-                        @entries[key].validity -= interval / 1000
-                        unless @entries[key].validity > 1
-                            @remove key
-                            @emit "expired", entry
-                setTimeout(repeat, interval)
-            (err) =>
-                @log "stormregistry stopped, validity checker stopping..."
-        )
 
 class StormAgent extends EventEmitter
 
@@ -485,8 +369,6 @@ class StormAgent extends EventEmitter
         )
 
 module.exports = StormAgent
-module.exports.StormData = StormData
-module.exports.StormRegistry = StormRegistry
 
 #-------------------------------------------------------------------------------------------
 
