@@ -476,8 +476,8 @@ class StormAgent extends EventEmitter
                         try
                             # writing the certs in to file
                             fs.mkdirSync("/etc/identity") unless fs.existsSync("/etc/identity")
-                            fs.writeFileSync('/etc/identity/logger.key',storm.bolt.key)
-                            fs.writeFileSync('/etc/identity/logger.crt',storm.bolt.cert)
+                            fs.writeFileSync('/etc/identity/minion.key',storm.bolt.key)
+                            fs.writeFileSync('/etc/identity/minion.crt',storm.bolt.cert)
                             fs.writeFileSync('/etc/identity/ca.crt',storm.bolt.ca)
                         catch err
                             @log "Error writing the certs in to file" + err
