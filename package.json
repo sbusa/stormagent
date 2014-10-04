@@ -10,7 +10,7 @@
 		"url": "git://github.com/stormstack/stormagent.git"
 	},
 	"dependencies": {
-		"zappajs": "0.4.x",
+		"zappajs": "git+https://github.com/zappajs/zappajs.git",
 		"morgan": "1.0.x",
 	    "passport" :"0.2.x",
 	    "passport-http" :"0.2.x",

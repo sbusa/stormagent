@@ -239,19 +239,19 @@ class StormAgent extends EventEmitter
             catch err
                 @log "unable to redirect stdout due to:", err
 
-        {@app} = require('zappajs') @config.port, ->
+        @app = require('zappajs') @config.port, ->
             morgan = require('morgan')
             morgan.token 'date', _agent.timestamp
             logger = morgan(":date - :method :url :status :response-time ms - :remote-addr")
 
-            @configure =>
-                @use 'bodyParser', 'methodOverride', logger, require("passport").initialize(), @app.router, 'static'
-                @set 'basepath': '/v1.0'
-                @set 'agent': _agent
+            errorhandler = require 'errorhandler'
 
-            @configure
-              development: => @use errorHandler: {dumpExceptions: on, showStack: on}
-              production: => @use 'errorHandler'
+            @use (require 'body-parser').urlencoded(), logger, require("passport").initialize(), 'static'
+            @set 'basepath': '/v1.0'
+            @set 'agent': _agent
+
+            if process.env.NODE_ENV is 'production'
+              @use 'errorHandler'
 
             _agent.emit 'running', @include
 
