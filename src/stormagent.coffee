@@ -177,6 +177,7 @@ class StormAgent extends EventEmitter
         @log "agent.functions", @functions
 
         @env = require './environment'
+        @logger = null
 
         ###
         @log "setting up directories..."
@@ -192,6 +193,17 @@ class StormAgent extends EventEmitter
         @on 'running', (@include) =>
             console.log "we are running now..."
             @state.running = true
+
+    # sets bunyan logger functions
+    setLogger: ->
+        @log "setting the bunyan logger"
+        @logger = new bunyan
+            name: @constructor.name
+            streams: [
+                level: bunyan.TRACE
+                path: @config.logfile
+            ]
+        @logger.debug "bunyan logger is set"
 
     # public functions
     status: ->
@@ -215,6 +227,7 @@ class StormAgent extends EventEmitter
 
     # starts the agent web services API
     run: (config, schema) ->
+        @setLogger()
         _agent = @;
 
         if config?
@@ -366,6 +379,7 @@ class StormAgent extends EventEmitter
                             return next null, storm
 
                         @log "looking up agent ID from stormtracker... #{storm.tracker}"
+                        @logger.info "looking up agent ID from stormtracker... #{storm.tracker}"
                         srequest request, "#{storm.tracker}/agents/serialkey/#{storm.skey}", storm, (err, res, body) =>
                             try
                                 next err if err
