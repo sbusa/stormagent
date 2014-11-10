@@ -4,10 +4,40 @@ EventEmitter = require('events').EventEmitter
 #
 
 util = require 'util'
+bunyan = require('bunyan')
 stormlog = (message, obj) ->
     out = "#{@constructor.name}: #{message}" if message?
     out += "\n" + util.inspect obj if obj?
     util.log out if out?
+
+bunyanlogger = null
+
+createlogger = (loggerconfig) ->
+    console.log "bunyan logger config: ", loggerconfig
+    try
+       switch loggerconfig.loglevel
+            when "fatal" then loglevel = bunyan.FATAL
+            when "error" then loglevel = bunyan.ERROR
+            when "warn" then loglevel = bunyan.WARN
+            when "info" then loglevel = bunyan.INFO
+            when "debug" then loglevel = bunyan.DEBUG
+            else loglevel = bunyan.TRACE
+
+        bunyanlogger = new bunyan
+            name: loggerconfig.name
+            streams: [
+                level: loglevel
+                path: loggerconfig.logfile
+            ]
+
+        bunyanlogger.info "bunyan logger for #{loggerconfig.name} created"
+        return bunyanlogger
+    catch error
+        console.log "error while creating bunyan logger for #{loggerconfig.name}: #{error}"
+        return new Error "Error while creating bunyan logger"
+
+getlogger = () ->
+    return bunyanlogger
 
 uuid = require('node-uuid')
 class StormData extends EventEmitter
@@ -16,6 +46,7 @@ class StormData extends EventEmitter
 
     constructor: (@id, @data, schema) ->
         @log = stormlog
+        @logger = getlogger()
 
         if schema?
             res = validate data, schema
@@ -30,6 +61,7 @@ async = require 'async'
 class StormRegistry extends EventEmitter
 
     constructor: (filename) ->
+        @logger = getlogger()
         @log = stormlog
 
         @running = true
@@ -41,10 +73,12 @@ class StormRegistry extends EventEmitter
                 @log "loaded #{filename}"
                 try
                     @db.forEach (key,val) =>
-                        @log "found #{key} with:", val
+                        #@log "found #{key} with:", val
+                        @logger.debug "found #{key} with:", val
                         @emit 'load', key, val if val?
                 catch err
-                    @log "issue during processing the db file at #{filename}"
+                    #@log "issue during processing the db file at #{filename}"
+                    @logger.error "issue during processing the db file at #{filename}"
                 @emit 'ready'
             @db._writeStream.on 'error', (err) =>
                 @log err
@@ -58,7 +92,8 @@ class StormRegistry extends EventEmitter
         key ?= uuid.v4() # if no key provided, dynamically generate one
         entry.id ?= key
         entry.saved ?= false
-        @log "adding #{key} into entries"
+        #@log "adding #{key} into entries"
+        @logger.debug "adding #{key} into entries"
         if @db? and not entry.saved
             data = entry
             data = entry.data if entry instanceof StormData
@@ -74,7 +109,8 @@ class StormRegistry extends EventEmitter
 
     remove: (key) ->
         return unless key?
-        @log "removing #{key} from entries"
+        #@log "removing #{key} from entries"
+        @logger.debug "removing #{key} from entries"
         entry = @entries[key]
         # delete the key from obj first...
         delete @entries[key]
@@ -139,6 +175,7 @@ class StormAgent extends EventEmitter
 
         # private helper functions
         @log = stormlog
+        @logger = createlogger {name: @constructor.name, logfile: config.logfile, loglevel: config.loglevel}
         @newdb = (filename,callback) ->
 
         @timestamp = ->
@@ -170,14 +207,16 @@ class StormAgent extends EventEmitter
         for key,val of process.env
             match = "#{key}".match /^npm_package_config_(.*)$/
             if match?
-                @log "found npm package config #{match} = #{val}"
+                #@log "found npm package config #{match} = #{val}"
+                @logger.debug "found npm package config #{match} = #{val}"
 
         @config = extend @config, config if config?
-        @log "agent.config", @config
-        @log "agent.functions", @functions
+        #@log "agent.config", @config
+        @logger.info "agent.config", @config
+        #@log "agent.functions", @functions
+        @logger.info "agent.functions", @functions
 
         @env = require './environment'
-        @logger = null
 
         ###
         @log "setting up directories..."
@@ -191,19 +230,9 @@ class StormAgent extends EventEmitter
 
         # handle when StormAgent webapp ready
         @on 'running', (@include) =>
-            console.log "we are running now..."
+            #console.log "we are running now..."
+            @logger.info "we are running now..."
             @state.running = true
-
-    # sets bunyan logger functions
-    setLogger: ->
-        @log "setting the bunyan logger"
-        @logger = new bunyan
-            name: @constructor.name
-            streams: [
-                level: bunyan.TRACE
-                path: @config.logfile
-            ]
-        @logger.debug "bunyan logger is set"
 
     # public functions
     status: ->
@@ -227,30 +256,35 @@ class StormAgent extends EventEmitter
 
     # starts the agent web services API
     run: (config, schema) ->
-        @setLogger()
         _agent = @;
 
         if config?
             if schema?
                 res = validate config, schema
-                @log 'run - validation of runtime config:', res
+                #@log 'run - validation of runtime config:', res
+                @logger.debug 'run - validation of runtime config:', res
                 @config = extend @config, config if res.valid
             else
                 @config = extend @config, config
 
         if @config.logfile?
-            @log "redirecting console.log to #{@config.logfile}..."
+            #@log "redirecting console.log to #{@config.logfile}..."
+            @logger.info "redirecting console.log to #{@config.logfile}..."
             try
                 logfile=fs.createWriteStream @config.logfile, { flags: 'a' }
                 logfile.on 'open', =>
-                    @log "starting stdout/stderr redirection..."
+                    #@log "starting stdout/stderr redirection..."
+                    @logger.debug "starting stdout/stderr redirection..."
                     process.__defineGetter__ "stdout", -> logfile
                     process.__defineGetter__ "stderr", -> logfile
-                    @log 'running with: ', @config
+                    #@log 'running with: ', @config
+                    @logger.info 'running with: ', @config
                 logfile.on 'error', (err) =>
-                    @log "unable to redirect stdout due to:", err
+                    #@log "unable to redirect stdout due to:", err
+                    @logger.warn "unable to redirect stdout due to: " + err
             catch err
-                @log "unable to redirect stdout due to:", err
+                #@log "unable to redirect stdout due to:", err
+                @logger.error "unable to redirect stdout due to: " + err
 
         {@app} = require('zappajs') @config.port, ->
             morgan = require('morgan')
@@ -275,46 +309,55 @@ class StormAgent extends EventEmitter
             # let's find the module root dir
             id = p = id.filename
             while (p = path.dirname(p)) and p isnt path.sep and not fs.existsSync("#{p}/package.json")
-                @log "checking #{p}..."
+                #@log "checking #{p}..."
+                @logger.debug "checking #{p}..."
             id = p if p isnt path.sep
 
         # inspect if we are importing in other "storm" compatible modules
         try
             pkgconfig = require("#{id}/package.json").config
             storm = pkgconfig.storm
-            @log "import - [#{id}] processing storm compatible module..."
+            #@log "import - [#{id}] processing storm compatible module..."
+            @logger.debug "import - [#{id}] processing storm compatible module..."
 
             if storm.functions?
-                @log "import - [#{id}] extending config and functions..."
+                #@log "import - [#{id}] extending config and functions..."
+                @logger.debug "import - [#{id}] extending config and functions..."
                 @config = extend( @config, pkgconfig) unless @state.running
                 delete @config.storm # we don't need the storm property
-                @log "import - [#{id}] available functions:", storm.functions
+                #@log "import - [#{id}] available functions:", storm.functions
+                @logger.debug "import - [#{id}] available functions:", storm.functions
                 @functions.push storm.functions... if storm.functions?
 
             if storm.plugins?
-                @log "import - [#{id}] available plugins:", storm.plugins
+                #@log "import - [#{id}] available plugins:", storm.plugins
+                @logger.debug "import - [#{id}] available plugins:", storm.plugins
                 for plugfile in storm.plugins
                     do (plugfile) =>
                         plugin = require("#{id}/#{plugfile}")
                         return unless plugin
 
-                        @log "import - [#{id}] found valid plugin at #{plugfile}"
+                        #@log "import - [#{id}] found valid plugin at #{plugfile}"
+                        @logger.debug "import - [#{id}] found valid plugin at #{plugfile}"
                         @include plugin if @state.running
                         # also schedule event trigger so that every time "running" is emitted, we re-load the APIs
                         @on 'running', (@include) =>
-                            @log "loading storm-compatible plugin for: #{id}/#{plugfile}"
+                            #@log "loading storm-compatible plugin for: #{id}/#{plugfile}"
+                            @logger.info "loading storm-compatible plugin for: #{id}/#{plugfile}"
                             try
                                 @include plugin
                             catch err
                                 @log "Unable to include the plugin #{plugin}!! #{err}"
         catch err
-            @log "import - [#{id}] is not a storm compatible module: "+err
+            #@log "import - [#{id}] is not a storm compatible module: "+err
+            @logger.error "import - [#{id}] is not a storm compatible module: " + err
 
         # return the real require call
         try
             require("#{id}") unless self? and self
         catch err
-            @log "import - [#{id}] failed with: "+err
+            #@log "import - [#{id}] failed with: "+err
+            @logger.warn "import - [#{id}] failed with: " + err
 
     imports: (modules...) ->
         @import module for module in modules
@@ -353,17 +396,20 @@ class StormAgent extends EventEmitter
 
             (repeat) => # repeat function
                 count++
-                @log "attempting activation (try #{count})..."
+                #@log "attempting activation (try #{count})..."
+                @logger.info "attempting activation (try #{count})..."
                 async.waterfall [
                     # 1. discover environment if no storm.tracker
                     (next) =>
                         if storm? and storm.tracker? and storm.skey? and storm.token?
                             return next null, storm
 
-                        @log "discovering environment..."
+                        #@log "discovering environment..."
+                        @logger.debug "discovering environment..."
                         @env.discover (storm) =>
                             if storm? and storm.provider? and storm.skey?
-                                @log "detected provider as: #{storm.provider} with skey: #{storm.skey}"
+                                #@log "detected provider as: #{storm.provider} with skey: #{storm.skey}"
+                                @logger.info "detected provider as: #{storm.provider} with skey: #{storm.skey}"
                                 if storm.tracker? and storm.token?
                                     @state.env = storm
                                     next null, storm
@@ -378,8 +424,8 @@ class StormAgent extends EventEmitter
                             @state.id = storm.id
                             return next null, storm
 
-                        @log "looking up agent ID from stormtracker... #{storm.tracker}"
-                        @logger.info "looking up agent ID from stormtracker... #{storm.tracker}"
+                        #@log "looking up agent ID from stormtracker... #{storm.tracker}"
+                        @logger.debug "looking up agent ID from stormtracker... #{storm.tracker}"
                         srequest request, "#{storm.tracker}/agents/serialkey/#{storm.skey}", storm, (err, res, body) =>
                             try
                                 next err if err
@@ -391,7 +437,8 @@ class StormAgent extends EventEmitter
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
                             catch error
-                                @log "unable to lookup agent ID: "+ error
+                                #@log "unable to lookup agent ID: "+ error
+                                @logger.warn "unable to lookup agent ID: " + error
                                 next error
 
                     # 3. generate CSR request if no storm.bolt.cert
@@ -400,7 +447,8 @@ class StormAgent extends EventEmitter
                         if storm.bolt.cert? or (storm.csr? and storm.bolt.key?)
                             return next null, storm
 
-                        @log "generating CSR..."
+                        #@log "generating CSR..."
+                        @logger.debug "generating CSR..."
                         try
                             pem = require 'pem'
                             pem.createCSR
@@ -413,7 +461,8 @@ class StormAgent extends EventEmitter
                                 emailAddress: "#{storm.id}@intercloud.net"
                               , (err, res) =>
                                 if res? and res.csr?
-                                    @log "CSR generation completed:", res.csr
+                                    #@log "CSR generation completed:", res.csr
+                                    @logger.debug "CSR generation completed:", res.csr
                                     storm.csr = res.csr
                                     storm.bolt.key = res.clientKey
                                     storm.bolt.key = new Buffer storm.bolt.key unless storm.bolt.key instanceof Buffer
@@ -421,7 +470,8 @@ class StormAgent extends EventEmitter
                                 else
                                     new Error "CSR generation failure"
                         catch error
-                            @log "unable to generate CSR request"
+                            #@log "unable to generate CSR request"
+                            @logger.warn "unable to generate CSR request"
                             next error
 
                     # 4. get CSR signed by stormtracker if no storm.cert
@@ -429,7 +479,8 @@ class StormAgent extends EventEmitter
                         if storm.bolt.cert? and storm.bolt.key?
                             return next null,storm
 
-                        @log "requesting CSR signing from #{storm.tracker}..."
+                        #@log "requesting CSR signing from #{storm.tracker}..."
+                        @logger.debug "requesting CSR signing from #{storm.tracker}..."
                         r = srequest request.post, "#{storm.tracker}/agents/#{storm.id}/csr", storm, (err, res, body) =>
                             try
                                 next err if err
@@ -439,20 +490,24 @@ class StormAgent extends EventEmitter
                                         try
                                             cert = JSON.parse body
                                             if cert.data? and cert.encoding?
-                                                @log "decoding signed cert data with #{body.encoding}"
+                                                #@log "decoding signed cert data with #{body.encoding}"
+                                                @logger.debug "decoding signed cert data with #{body.encoding}"
                                                 storm.bolt.cert = new Buffer cert.data, cert.encoding
                                             else
-                                                @log "unkown format for cert... leaving cert AS-IS"
+                                                #@log "unkown format for cert... leaving cert AS-IS"
+                                                @logger.warn "unkown format for cert... leaving cert AS-IS"
                                                 storm.bolt.cert = body
                                         catch err
-                                            @log "provided cert is not JSON... treating as string"
+                                            #@log "provided cert is not JSON... treating as string"
+                                            @logger.warn "provided cert is not JSON... treating as string"
                                             storm.bolt.cert = new Buffer body
 
                                         next null, storm
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
                             catch error
-                                @log "unable to post CSR to get signed by stormtracker", error
+                                #@log "unable to post CSR to get signed by stormtracker", error
+                                @logger.error "unable to post CSR to get signed by stormtracker" + error
                                 next error
 
                         form = r.form()
@@ -469,22 +524,26 @@ class StormAgent extends EventEmitter
                                 switch res.statusCode
                                     when 200
                                         bolt = JSON.parse body
-                                        @log "retrieving stormbolt configs from stormtracker...",bolt
+                                        #@log "retrieving stormbolt configs from stormtracker...",bolt
+                                        @logger.debug "retrieving stormbolt configs from stormtracker...", bolt
                                         throw new Error "missing bolt.ca!" unless bolt.ca?
                                         if bolt.ca.data? and bolt.ca.encoding?
-                                            @log "decoding signed cert data with #{bolt.ca.encoding}"
+                                            #@log "decoding signed cert data with #{bolt.ca.encoding}"
+                                            @logger.debug "decoding signed cert data with #{bolt.ca.encoding}"
                                             bolt.ca = new Buffer bolt.ca.data, bolt.ca.encoding
                                         storm.bolt = extend(storm.bolt, bolt)
                                         next null, storm
                                     else
                                         next new Error "received #{res.statusCode} from stormtracker"
                             catch error
-                                @log "unable to retrieve stormbolt configs"
+                                #@log "unable to retrieve stormbolt configs"
+                                @logger.error "unable to retrieve stormbolt configs"
                                 next error
 
                 ], (err, storm) => # finally
                     if err or not storm
-                        @log "error during activation:", err
+                        #@log "error during activation:", err
+                        @logger.error "error during activation:" + err
                         setTimeout repeat, @config.repeatdelay
                     else
                         try
@@ -494,15 +553,18 @@ class StormAgent extends EventEmitter
                             fs.writeFileSync('/etc/identity/minion.crt',storm.bolt.cert)
                             fs.writeFileSync('/etc/identity/ca.crt',storm.bolt.ca)
                         catch err
-                            @log "Error writing the certs in to file" + err
+                            #@log "Error writing the certs in to file" + err
+                            @logger.error "Error writing the certs in to file" + err
                         
-                        @log "activation completed successfully"
+                        #@log "activation completed successfully"
+                        @logger.info "activation completed successfully"
                         @state.activated = true
                         @emit "activated", storm
                         repeat storm
 
             (storm) => # final call
-                @log "final call on until...",storm
+                #@log "final call on until...",storm
+                @logger.debug "final call on until...", storm
                 unless storm instanceof Error
                     callback storm if callback?
         )
