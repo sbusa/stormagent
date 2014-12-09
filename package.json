@@ -1,7 +1,7 @@
 {
 	"name": "stormagent",
 	"description": "stormagent provides base agent functionality for all stormstack components",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"author": "Peter K. Lee <peter@intercloud.net>",
 	"homepage": "http://stormstack.org",
 	"license": "MIT",
@@ -69,6 +69,7 @@
 		"start": "node lib/stormagent"
 	},
 	"contributors": [
+        "Ravi Kumar <ravivsn@gmail.com>",
 		"Suresh Kumar"
 	]
 }

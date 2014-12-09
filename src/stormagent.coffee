@@ -267,6 +267,7 @@ class StormAgent extends EventEmitter
 
         # inspect if we are importing in other "storm" compatible modules
         try
+            (@state)[b = require("#{id}/package.json").name ?= id] = require("#{id}/package.json").version
             pkgconfig = require("#{id}/package.json").config
             storm = pkgconfig.storm
             @log "import - [#{id}] processing storm compatible module..."
