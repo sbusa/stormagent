@@ -267,6 +267,7 @@ class StormAgent extends EventEmitter
 
         # inspect if we are importing in other "storm" compatible modules
         try
+            (@state)[b = require("#{id}/package.json").name ?= id] = require("#{id}/package.json").version
             pkgconfig = require("#{id}/package.json").config
             storm = pkgconfig.storm
             @log "import - [#{id}] processing storm compatible module..."
@@ -473,6 +474,15 @@ class StormAgent extends EventEmitter
                         @log "error during activation:", err
                         setTimeout repeat, @config.repeatdelay
                     else
+                        try
+                            # writing the certs in to file
+                            fs.mkdirSync("/etc/identity") unless fs.existsSync("/etc/identity")
+                            fs.writeFileSync('/etc/identity/minion.key',storm.bolt.key)
+                            fs.writeFileSync('/etc/identity/minion.crt',storm.bolt.cert)
+                            fs.writeFileSync('/etc/identity/ca.crt',storm.bolt.ca)
+                        catch err
+                            @log "Error writing the certs in to file" + err
+                        
                         @log "activation completed successfully"
                         @state.activated = true
                         @emit "activated", storm
