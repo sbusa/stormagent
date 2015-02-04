@@ -14,7 +14,7 @@ class StormData extends EventEmitter
 
     validate = require('json-schema').validate
 
-    constructor: (@id, @data, schema) ->
+    constructor: (@id, data, schema) ->
         @log = stormlog
 
         if schema?
@@ -25,6 +25,7 @@ class StormData extends EventEmitter
         @id ?= uuid.v4()
         @validity = data.validity if data?
         @saved = false
+        @data = data if data?
 
 async = require 'async'
 class StormRegistry extends EventEmitter
@@ -44,7 +45,7 @@ class StormRegistry extends EventEmitter
                         @log "found #{key} with:", val
                         @emit 'load', key, val if val?
                 catch err
-                    @log "issue during processing the db file at #{filename}"
+                    @log "issue during processing the db file at #{filename}", err
                 @emit 'ready'
             @db._writeStream.on 'error', (err) =>
                 @log err
