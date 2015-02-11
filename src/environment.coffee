@@ -24,6 +24,25 @@ class Environment
         console.log 'Environment constructor called'
 
     check: (provider, callback) ->
+
+        # here, we actually should handle case where metadata can be read from json file - /etc/meta-data.json
+        metadata = require('/etc/meta-data')
+        util.log "reading from file..."
+        
+        if metadata?
+            url = require('url').parse metadata.meta.stormtracker
+            auth = url.auth
+            delete url.auth
+
+            stormdata =
+                provider: provider.name
+                skey:     metadata.uuid
+                tracker:  require('url').format url
+                token:    auth
+
+            console.log "Building Stormdata from json file..."
+            return callback stormdata if stormdata.skey
+
         # here, we actually should handle case where provider.metaurl is NOT set
 
         return callback() unless provider? and provider.metaurl?
